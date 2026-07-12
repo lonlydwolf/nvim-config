@@ -61,6 +61,9 @@ end, { desc = "[T]oggle [S]pell Check" })
 map("n", "<leader>tw", function()
 	vim.wo.list = not vim.wo.list
 end, { desc = "[T]oggle [W]hitespace glyphs" })
+map("n", "<leader>tW", function()
+	vim.wo.wrap = not vim.wo.wrap
+end, { desc = "[T]oggle [W]rap" })
 
 -- Native floating terminal toggle
 local term_buf, term_win = nil, nil
