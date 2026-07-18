@@ -69,4 +69,15 @@ opt.listchars = { tab = "» ", trail = "." }
 
 -- Ensure mise-managed tools (LSPs, formatters, linters) are always found,
 -- even when nvim is launched from a GUI that never sourced .zshrc.
-vim.env.PATH = vim.fn.expand("~/.local/share/mise/shims") .. ":" .. vim.env.PATH
+local ok, obj = pcall(function()
+	return vim.system({ "mise", "bin-paths" }, { text = true }):wait()
+end)
+
+if ok and obj.code == 0 then
+	local stdout = vim.trim(obj.stdout)
+
+	if stdout ~= "" then
+		local dirs = vim.split(stdout, "\n", { trimempty = true })
+		vim.env.PATH = table.concat(dirs, ":") .. ":" .. vim.env.PATH
+	end
+end
