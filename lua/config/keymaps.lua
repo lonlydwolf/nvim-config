@@ -3,11 +3,11 @@
 -- ============================================================
 local map = vim.keymap.set
 
--- Window navigation
-map("n", "<C-h>", "<C-w>h", { desc = "Go to left window" })
-map("n", "<C-j>", "<C-w>j", { desc = "Go to lower window" })
-map("n", "<C-k>", "<C-w>k", { desc = "Go to upper window" })
-map("n", "<C-l>", "<C-w>l", { desc = "Go to right window" })
+-- Window navigation -- falls through to the adjacent tmux pane at the edge
+map("n", "<C-h>", "<cmd>TmuxNavigateLeft<CR>", { desc = "Go to left window/pane" })
+map("n", "<C-j>", "<cmd>TmuxNavigateDown<CR>", { desc = "Go to lower window/pane" })
+map("n", "<C-k>", "<cmd>TmuxNavigateUp<CR>", { desc = "Go to upper window/pane" })
+map("n", "<C-l>", "<cmd>TmuxNavigateRight<CR>", { desc = "Go to right window/pane" })
 
 -- Repeatable window resizing
 map("n", "<C-Up>", "<cmd>resize +2<CR>", { desc = "Increase window height" })

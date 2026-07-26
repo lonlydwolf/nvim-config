@@ -2,6 +2,9 @@
 -- PLUGINS (vim.pack)
 -- ============================================================
 
+-- Must be set before vim-tmux-navigator loads to suppress its default mappings
+vim.g.tmux_navigator_no_mappings = 1
+
 vim.pack.add({
   -- LSP: server configs only, no .setup() calls -- driven via native
   -- vim.lsp.enable() in config/lsp.lua
@@ -46,6 +49,9 @@ vim.pack.add({
 
   -- Theme
   { src = 'https://github.com/catppuccin/nvim', name = 'catppuccin' },
+
+  -- Split/pane navigation -- needs the matching TPM plugin in tmux.conf
+  { src = 'https://github.com/christoomey/vim-tmux-navigator' },
 
   -- Keymap discovery popup -- intentionally temporary, remove once your
   -- own keymaps are muscle memory
