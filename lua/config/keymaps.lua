@@ -91,7 +91,7 @@ local function toggle_terminal()
 	else
 		term_buf = vim.api.nvim_create_buf(false, true)
 		term_win = vim.api.nvim_open_win(term_buf, true, win_opts)
-		vim.fn.termopen(vim.o.shell)
+		vim.fn.jobstart(vim.o.shell, { term = true })
 		vim.cmd.startinsert()
 	end
 end

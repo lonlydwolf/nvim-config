@@ -160,8 +160,12 @@ require("gitsigns").setup({
 
 		-- Navigation lives on brackets (same family as native [d/]d), actions
 		-- live under <leader>g
-		gmap("n", "]h", gs.next_hunk, "Next hunk")
-		gmap("n", "[h", gs.prev_hunk, "Previous hunk")
+		gmap("n", "]h", function()
+			gs.nav_hunk("next")
+		end, "Next hunk")
+		gmap("n", "[h", function()
+			gs.nav_hunk("prev")
+		end, "Previous hunk")
 		gmap("n", "<leader>gs", gs.stage_hunk, "[G]it [S]tage hunk")
 		gmap("n", "<leader>gr", gs.reset_hunk, "[G]it [R]eset hunk")
 		-- Visual actions operate on selected lines, not the entire cursor hunk.
