@@ -167,7 +167,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
 		vim.keymap.set(
 			"n",
 			"<leader>lr",
-			"<cmd>LspRestart<CR>",
+			"<cmd>lsp restart<CR>",
 			vim.tbl_extend("force", opts, { desc = "[L]SP [R]estart client" })
 		)
 
