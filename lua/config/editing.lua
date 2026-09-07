@@ -145,8 +145,15 @@ require("gitsigns").setup({
 		-- live under <leader>g
 		gmap("n", "]h", gs.next_hunk, "Next hunk")
 		gmap("n", "[h", gs.prev_hunk, "Previous hunk")
-		gmap({ "n", "v" }, "<leader>gs", gs.stage_hunk, "[G]it [S]tage hunk")
-		gmap({ "n", "v" }, "<leader>gr", gs.reset_hunk, "[G]it [R]eset hunk")
+		gmap("n", "<leader>gs", gs.stage_hunk, "[G]it [S]tage hunk")
+		gmap("n", "<leader>gr", gs.reset_hunk, "[G]it [R]eset hunk")
+		-- Visual actions operate on selected lines, not the entire cursor hunk.
+		gmap("x", "<leader>gs", function()
+			gs.stage_hunk({ vim.fn.line("."), vim.fn.line("v") })
+		end, "[G]it [S]tage selected lines")
+		gmap("x", "<leader>gr", function()
+			gs.reset_hunk({ vim.fn.line("."), vim.fn.line("v") })
+		end, "[G]it [R]eset selected lines")
 		gmap("n", "<leader>gp", gs.preview_hunk, "[G]it [P]review hunk")
 		gmap("n", "<leader>gb", gs.toggle_current_line_blame, "[G] Toggle line [B]lame")
 		gmap("n", "<leader>gd", gs.diffthis, "[G]it [D]iff this file")
