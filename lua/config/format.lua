@@ -9,7 +9,9 @@ require("conform").setup({
 		python = { "ruff_format" },
 
 		javascript = { "biome" },
+		javascriptreact = { "biome" },
 		typescript = { "biome" },
+		typescriptreact = { "biome" },
 
 		c = { "clang_format" },
 		cpp = { "clang_format" },

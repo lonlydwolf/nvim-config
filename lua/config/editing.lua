@@ -18,6 +18,10 @@ require("nvim-treesitter").setup({
 local ensure_installed = {
 	"lua",
 	"python",
+	"javascript",
+	"typescript",
+	"tsx",
+	"go",
 	"c",
 	"cpp",
 	"rust",
