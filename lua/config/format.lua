@@ -72,11 +72,17 @@ require("lint").linters_by_ft = {
 	ansible = { "ansible_lint" },
 }
 
--- Run lint on save + when leaving insert mode (balanced responsiveness)
+-- Run all configured linters on save; only stdin-based linters on InsertLeave.
 vim.api.nvim_create_autocmd({ "BufWritePost", "InsertLeave" }, {
 	group = vim.api.nvim_create_augroup("user-lint", { clear = true }),
 	callback = function(ev)
 		local lint = require("lint")
+		if ev.event == "InsertLeave" then
+			-- Disk-based tools would inspect stale files and may trigger expensive builds.
+			lint.try_lint(nil, { filter = "stdin" })
+			return
+		end
+
 		local ft = vim.bo[ev.buf].filetype
 		if ft == "c" or ft == "cpp" then
 			local filename = vim.api.nvim_buf_get_name(ev.buf)
