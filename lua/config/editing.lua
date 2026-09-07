@@ -41,6 +41,19 @@ if #to_install > 0 then
 	require("nvim-treesitter").install(to_install)
 end
 
+-- Installing parsers does not enable highlighting in the community fork.
+vim.api.nvim_create_autocmd("FileType", {
+	group = vim.api.nvim_create_augroup("user-treesitter-highlight", { clear = true }),
+	desc = "Enable Treesitter highlighting when a parser is available",
+	callback = function(ev)
+		if vim.bo[ev.buf].buftype ~= "" then
+			return
+		end
+		-- Unsupported filetypes or parsers still being installed must not block opening files.
+		pcall(vim.treesitter.start, ev.buf)
+	end,
+})
+
 -- Structural text objects, motions, and swaps. mini.ai only covers
 -- selection, not motion or swap, so this is a separate, focused plugin
 -- rather than routed through mini.ai.
