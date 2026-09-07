@@ -52,7 +52,7 @@ end, { desc = "Next diagnostic (centered)" })
 
 -- Paste over a visual selection without the deleted selection overwriting
 -- your yank register (routes the delete to the black-hole register instead)
-map("x", "p", '"_dP', { desc = "Paste over selection without overwriting register" })
+map("x", "p", "P", { desc = "Paste over selection without overwriting register" })
 
 -- <leader>t "toggle" group
 map("n", "<leader>ts", function()
