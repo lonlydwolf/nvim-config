@@ -56,4 +56,13 @@ vim.pack.add({
   -- Keymap discovery popup -- intentionally temporary, remove once your
   -- own keymaps are muscle memory
   { src = 'https://github.com/folke/which-key.nvim' },
+
+  -- Cursor line number mode indicator
+  -- A small Neovim plugin that changes 
+  -- the color of your cursor's line number based on the current Vim mode.
+  { src = 'https://github.com/mawkler/modicator.nvim'},
+
+  -- nvim-hlslens helps you better glance at matched information,
+  -- seamlessly jump between matched instances.
+  { src = 'https://github.com/kevinhwang91/nvim-hlslens'},
 })

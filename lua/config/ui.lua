@@ -11,6 +11,17 @@ require("catppuccin").setup({
 			CursorLineNr = { fg = colors.lavender, bold = true },
 			Visual = { bg = colors.surface2 },
 			Search = { fg = colors.base, bg = colors.yellow },
+
+			-- Modicator has no mini.statusline integration
+			-- so we have to define the colors here for it to match mini.statusline
+			NormalMode = { fg = colors.blue, bold = true },
+			InsertMode = { fg = colors.green, bold = true },
+			VisualMode = { fg = colors.mauve, bold = true },
+			CommandMode = { fg = colors.peach, bold = true },
+			ReplaceMode = { fg = colors.red, bold = true },
+			SelectMode = { fg = colors.teal, bold = true },
+			TerminalMode = { fg = colors.teal, bold = true },
+			TerminalNormalMode = { fg = colors.blue, bold = true },
 		}
 	end,
 	integrations = {
@@ -100,3 +111,9 @@ which_key.add({
 	{ "<leader>t", group = "[T]oggle" },
 	{ "<leader>c", group = "[C]heck" },
 })
+
+-- Initialize Modicator.nvim
+require("modicator").setup()
+
+-- Initialize nvim-hlslens
+require("hlslens").setup()
