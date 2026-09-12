@@ -267,11 +267,21 @@ vim.api.nvim_create_autocmd("LspAttach", {
 				group = vim.api.nvim_create_augroup("user-lsp-detach-" .. ev.buf, { clear = true }),
 				buffer = ev.buf,
 				callback = function(detach_ev)
-					vim.lsp.buf.clear_references()
-					vim.api.nvim_clear_autocmds({
-						group = "user-lsp-highlight-" .. detach_ev.buf,
-						buffer = detach_ev.buf,
-					})
+					local departing_id = detach_ev.data and detach_ev.data.client_id
+					local remaining_has_highlight = vim.iter(vim.lsp.get_clients({ bufnr = detach_ev.buf }))
+						:any(function(c)
+							return c.id ~= departing_id and c:supports_method("textDocument/documentHighlight")
+						end)
+
+					if not remaining_has_highlight then
+						if vim.api.nvim_buf_is_valid(detach_ev.buf) then
+							vim.api.nvim_buf_call(detach_ev.buf, vim.lsp.buf.clear_references)
+						end
+						vim.api.nvim_clear_autocmds({
+							group = "user-lsp-highlight-" .. detach_ev.buf,
+							buffer = detach_ev.buf,
+						})
+					end
 				end,
 			})
 		end
