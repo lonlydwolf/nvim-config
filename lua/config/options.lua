@@ -39,12 +39,11 @@ opt.smartcase = true -- Case sensitive if uppercase in string
 opt.incsearch = true -- Show matches as typing
 opt.hlsearch = true -- Highlight search matches
 
--- Disk-backed, presistant undo history
-opt.undofile = true -- Do create undo file
--- opt.undodir is not needed since nvim default is $XDG_STATE_HOME/nvim/undo//
-opt.swapfile = false -- Do not creat swap file
-opt.backup = false -- Do not create backup file
-opt.writebackup = false -- Do not write to backup file
+-- Disk-backed, persistent undo history and crash recovery
+opt.undofile = true
+opt.swapfile = true
+opt.backup = false
+opt.writebackup = true
 
 -- Fold
 opt.foldmethod = "expr" -- Use expression for folding
