@@ -166,32 +166,61 @@ vim.api.nvim_create_autocmd("LspAttach", {
 	callback = function(ev)
 		local opts = { buffer = ev.buf }
 		local client = vim.lsp.get_client_by_id(ev.data.client_id)
+		local fzf = require("fzf-lua")
 
 		-- --------------------------------------------------------
-		-- Navigation
+		-- Navigation (fzf-lua)
 		-- --------------------------------------------------------
 
-		vim.keymap.set(
-			"n",
-			"gd",
-			vim.lsp.buf.definition,
-			vim.tbl_extend("force", opts, { desc = "[G]o to [D]efinition" })
-		)
+		vim.keymap.set("n", "gd", fzf.lsp_definitions, vim.tbl_extend("force", opts, { desc = "[G]o to [D]efinition" }))
 
 		vim.keymap.set(
 			"n",
 			"gD",
-			vim.lsp.buf.declaration,
+			fzf.lsp_declarations,
 			vim.tbl_extend("force", opts, { desc = "[G]o to [D]eclaration" })
 		)
 
+		vim.keymap.set("n", "grr", fzf.lsp_references, vim.tbl_extend("force", opts, { desc = "[G]o to [R]eferences" }))
+
+		vim.keymap.set(
+			"n",
+			"gri",
+			fzf.lsp_implementations,
+			vim.tbl_extend("force", opts, { desc = "[G]o to [I]mplementation" })
+		)
+
+		vim.keymap.set(
+			"n",
+			"gy",
+			fzf.lsp_typedefs,
+			vim.tbl_extend("force", opts, { desc = "[G]o to T[y]pe Definition" })
+		)
+
+		vim.keymap.set(
+			"n",
+			"gO",
+			fzf.lsp_document_symbols,
+			vim.tbl_extend("force", opts, { desc = "Document [O]utline (Symbols)" })
+		)
+
 		-- --------------------------------------------------------
-		-- Diagnostics → Quickfix
+		-- Diagnostics (fzf-lua)
 		-- --------------------------------------------------------
 
-		vim.keymap.set("n", "<leader>ld", function()
-			vim.diagnostic.setqflist({ bufnr = 0 })
-		end, vim.tbl_extend("force", opts, { desc = "[L]SP [D]iagnostics → quickfix" }))
+		vim.keymap.set(
+			"n",
+			"<leader>ld",
+			fzf.diagnostics_document,
+			vim.tbl_extend("force", opts, { desc = "[L]SP [D]iagnostics (Buffer)" })
+		)
+
+		vim.keymap.set(
+			"n",
+			"<leader>lD",
+			fzf.diagnostics_workspace,
+			vim.tbl_extend("force", opts, { desc = "[L]SP [D]iagnostics (Workspace)" })
+		)
 
 		-- --------------------------------------------------------
 		-- LSP Restart
