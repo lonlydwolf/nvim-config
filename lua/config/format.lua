@@ -30,7 +30,16 @@ require("conform").setup({
 
 		dockerfile = { "dockerfmt" },
 
-		["yaml.ansible"] = { "ansible-lint" },
+		-- Ordinary saves only format YAML; broad lint fixes require :AnsibleFix.
+		["yaml.ansible"] = { "prettier" },
+	},
+
+	formatters = {
+		prettier = {
+			options = {
+				ft_parsers = { ["yaml.ansible"] = "yaml" },
+			},
+		},
 	},
 
 	-- Format on save (buffer-safe toggle aware)
@@ -46,6 +55,26 @@ require("conform").setup({
 vim.keymap.set("n", "<leader>f", function()
 	require("conform").format({ async = true, lsp_format = "fallback" })
 end, { desc = "Format buffer" })
+
+-- Explicit opt-in to ansible-lint --fix=all. Review the buffer diff before saving.
+vim.api.nvim_create_user_command("AnsibleFix", function()
+	local bufnr = vim.api.nvim_get_current_buf()
+	if vim.bo[bufnr].filetype ~= "yaml.ansible" then
+		vim.notify("AnsibleFix requires an Ansible YAML buffer", vim.log.levels.WARN)
+		return
+	end
+	if vim.bo[bufnr].buftype ~= "" or vim.api.nvim_buf_get_name(bufnr) == "" then
+		vim.notify("AnsibleFix requires a named file buffer", vim.log.levels.WARN)
+		return
+	end
+
+	require("conform").format({
+		bufnr = bufnr,
+		formatters = { "ansible-lint" },
+		async = true,
+		lsp_format = "never",
+	})
+end, { desc = "Apply Ansible lint fixes to buffer (review before saving)" })
 
 -- Toggle format-on-save (buffer-local)
 vim.keymap.set("n", "<leader>tf", function()
