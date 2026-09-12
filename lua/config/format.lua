@@ -63,15 +63,9 @@ end, { desc = "[T]oggle [F]ormat on save (buffer)" })
 require("lint").linters_by_ft = {
 	dockerfile = { "hadolint" },
 	yaml = { "yamllint" },
-	sh = { "shellcheck" },
-
+	["yaml.ansible"] = {}, -- Suppress yamllint fallback; ansiblels owns Ansible linting
 	c = { "clangtidy" },
 	cpp = { "clangtidy" },
-
-	rust = { "clippy" },
-	go = { "staticcheck" },
-
-	["yaml.ansible"] = { "ansible_lint" },
 }
 
 -- Run all configured linters on save; only stdin-based linters on InsertLeave.

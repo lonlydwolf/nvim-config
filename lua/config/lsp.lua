@@ -72,17 +72,43 @@ vim.lsp.config("lua_ls", {
 	},
 })
 
--- 2. Bash: Enable on zsh files (.zshrc, scripts)
+-- 2. Bash: Enable on zsh files (.zshrc, scripts) + shellcheck diagnostics
 vim.lsp.config("bashls", {
 	filetypes = { "bash", "sh", "zsh" },
+	settings = {
+		bashIde = {
+			shellcheckPath = "shellcheck",
+		},
+	},
 })
 
--- 3. Ansible: Add .git as fallback root so playbooks start without ansible.cfg
+-- 3. Ansible: Add .git as fallback root + ansible-lint diagnostics
 vim.lsp.config("ansiblels", {
 	root_markers = { "ansible.cfg", ".ansible-lint", ".git" },
+	settings = {
+		ansible = {
+			validation = {
+				lint = {
+					enabled = true,
+					path = "ansible-lint",
+				},
+			},
+		},
+	},
 })
 
--- 4. TypeScript / JavaScript (vtsls): Enable inlay hints (opt-in)
+-- 4. Rust (rust-analyzer): Clippy diagnostics on check
+vim.lsp.config("rust_analyzer", {
+	settings = {
+		["rust-analyzer"] = {
+			check = {
+				command = "clippy",
+			},
+		},
+	},
+})
+
+-- 5. TypeScript / JavaScript (vtsls): Enable inlay hints (opt-in)
 vim.lsp.config("vtsls", {
 	settings = {
 		typescript = {
@@ -108,10 +134,11 @@ vim.lsp.config("vtsls", {
 	},
 })
 
--- 5. Go (gopls): Enable inlay hints (opt-in)
+-- 6. Go (gopls): Enable inlay hints (opt-in) + staticcheck
 vim.lsp.config("gopls", {
 	settings = {
 		gopls = {
+			staticcheck = true,
 			hints = {
 				assignVariableTypes = true,
 				compositeLiteralFields = true,
@@ -125,7 +152,7 @@ vim.lsp.config("gopls", {
 	},
 })
 
--- 6. JSON & YAML: Schemastore integration
+-- 7. JSON & YAML: Schemastore integration
 vim.lsp.config("jsonls", {
 	settings = {
 		json = {
