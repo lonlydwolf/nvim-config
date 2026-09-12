@@ -19,17 +19,8 @@ map("n", "<C-Right>", "<cmd>vertical resize +2<CR>", { desc = "Increase window w
 map("n", "[b", "<cmd>bprevious<CR>", { desc = "Previous buffer" })
 map("n", "]b", "<cmd>bnext<CR>", { desc = "Next buffer" })
 map("n", "<leader>bd", function()
-	local current = vim.api.nvim_get_current_buf()
-	local alt = vim.fn.bufnr("#")
-	if alt ~= -1 and vim.api.nvim_buf_is_valid(alt) and vim.bo[alt].buflisted then
-		vim.cmd("buffer #")
-	else
-		vim.cmd("bnext")
-	end
-	if vim.api.nvim_buf_is_valid(current) then
-		vim.cmd("bdelete " .. current)
-	end
-end, { desc = "[B]uffer [D]elete  (keep window)" })
+	require("mini.bufremove").delete(0, false)
+end, { desc = "[B]uffer [D]elete (keep window)" })
 
 -- Clear search highlight
 map("n", "<Esc>", "<cmd>nohlsearch<CR>")

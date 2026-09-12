@@ -151,6 +151,9 @@ indentscope.setup({
 	},
 })
 
+-- Buffer removal preserving window layouts
+require("mini.bufremove").setup()
+
 -- Git gutter signs / hunk actions. Reads .git directly, so this works fine
 -- against a jj repo with a colocated git backend.
 require("gitsigns").setup({

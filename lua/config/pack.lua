@@ -36,7 +36,7 @@ vim.pack.add({
 
 	-- mini.nvim monorepo: Single clone providing 40+ lightweight modules
 	-- We will use: mini.ai, mini.surround, mini.pairs, mini.indentscope
-	--              mini.statusline, mini.notify
+	--              mini.statusline, mini.notify, mini.icons, mini.bufremove
 	-- (Modules remain dormant on disk and consume zero overhead until setup)
 	{ src = "https://github.com/echasnovski/mini.nvim" },
 
