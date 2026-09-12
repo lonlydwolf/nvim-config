@@ -21,6 +21,8 @@ local ensure_installed = {
 	"javascript",
 	"typescript",
 	"tsx",
+	"ecma",
+	"jsx",
 	"go",
 	"c",
 	"cpp",
