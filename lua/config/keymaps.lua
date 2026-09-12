@@ -94,8 +94,20 @@ map("t", "<Esc><Esc>", "<C-\\><C-n>", { desc = "Exit terminal mode" })
 -- Capital S, standalone -- lowercase <leader>ss is "search workspace
 -- symbols" in the s-group (finder.lua), so this can't live there.
 map("n", "<leader>S", function()
-	vim.cmd("mksession! " .. vim.fn.stdpath("state") .. "/sessions/manual.vim")
-	vim.notify("Session saved")
+	local session_dir = vim.fn.stdpath("state") .. "/sessions"
+	local ok_dir, dir_err = pcall(vim.fn.mkdir, session_dir, "p")
+	if not ok_dir then
+		vim.notify("Failed to create session directory: " .. tostring(dir_err), vim.log.levels.ERROR)
+		return
+	end
+
+	local manual_file = session_dir .. "/manual.vim"
+	local ok, err = pcall(vim.cmd, "mksession! " .. vim.fn.fnameescape(manual_file))
+	if ok then
+		vim.notify("Session saved: manual.vim", vim.log.levels.INFO)
+	else
+		vim.notify("Failed to save manual session: " .. tostring(err), vim.log.levels.ERROR)
+	end
 end, { desc = "Save session manually" })
 
 -- <leader>c "Check" group

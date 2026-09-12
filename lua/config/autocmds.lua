@@ -39,23 +39,37 @@ vim.api.nvim_create_autocmd("FileType", {
 	end,
 })
 
--- Session auto-save/restore, keyed by a hash of cwd so different projects
--- don't collide. Only triggers when Nvim was opened with no file arguments
--- (`nvim` alone, not `nvim somefile.lua`).
-local session_dir = vim.fn.stdpath("state") .. "/sessions/"
-vim.fn.mkdir(session_dir, "p")
+-- ============================================================
+-- SESSION AUTO-SAVE / RESTORE
+-- ============================================================
+-- Exclude transient terminals from sessions so toggle states remain clean
+vim.opt.sessionoptions:remove("terminal")
 
-local function session_file()
-	return session_dir .. vim.fn.sha256(vim.fn.getcwd()) .. ".vim"
+local session_dir = vim.fn.stdpath("state") .. "/sessions/"
+
+-- Capture startup identity once: changing directories or argument lists later
+-- will not alter this session's identity or eligibility.
+local startup_cwd = vim.fn.getcwd()
+local session_file = session_dir .. vim.fn.sha256(startup_cwd) .. ".vim"
+local session_enabled = vim.fn.argc(-1) == 0
+
+-- Attempt directory creation inside pcall; disable auto-session on failure
+local ok_mkdir, mkdir_err = pcall(vim.fn.mkdir, session_dir, "p")
+if not ok_mkdir then
+	session_enabled = false
+	vim.notify(
+		"Failed to create session directory; auto-session disabled: " .. tostring(mkdir_err),
+		vim.log.levels.WARN
+	)
 end
 
-vim.api.nvim_create_autocmd("VimLeavePre", {
+-- Safety guard: detect piped input (e.g. `cmd | nvim`)
+local is_piped = false
+vim.api.nvim_create_autocmd("StdinReadPre", {
 	group = augroup,
-	desc = "Auto-save session for this project on exit",
+	desc = "Detect piped stdin to prevent auto-session",
 	callback = function()
-		if vim.fn.argc() == 0 then
-			vim.cmd("mksession! " .. session_file())
-		end
+		is_piped = true
 	end,
 })
 
@@ -64,8 +78,63 @@ vim.api.nvim_create_autocmd("VimEnter", {
 	desc = "Auto-restore session for this project on startup",
 	nested = true,
 	callback = function()
-		if vim.fn.argc() == 0 and vim.fn.filereadable(session_file()) == 1 then
-			vim.cmd("source " .. session_file())
+		-- Safety guards: no file arguments, not piped, not headless
+		if not session_enabled or is_piped or #vim.api.nvim_list_uis() == 0 then
+			session_enabled = false
+			return
+		end
+
+		if vim.fn.filereadable(session_file) == 1 then
+			local ok, err = pcall(vim.cmd, "source " .. vim.fn.fnameescape(session_file))
+			if not ok then
+				-- Prevent broken partial state from overwriting session on exit
+				session_enabled = false
+				vim.notify("Failed to restore session: " .. tostring(err), vim.log.levels.WARN)
+				return
+			end
+		end
+	end,
+})
+
+vim.api.nvim_create_autocmd("VimLeavePre", {
+	group = augroup,
+	desc = "Auto-save session for this project on exit",
+	callback = function()
+		if not session_enabled or #vim.api.nvim_list_uis() == 0 then
+			return
+		end
+
+		local ok_dir, dir_err = pcall(vim.fn.mkdir, session_dir, "p")
+		if not ok_dir then
+			vim.notify("Failed to create session directory: " .. tostring(dir_err), vim.log.levels.WARN)
+			return
+		end
+
+		-- Preserve session identity if directory was changed during the session
+		local current_cwd = vim.fn.getcwd()
+		local switched = false
+		if current_cwd ~= startup_cwd then
+			local ok_cd, cd_err = pcall(vim.cmd, "noautocmd cd " .. vim.fn.fnameescape(startup_cwd))
+			if not ok_cd then
+				vim.notify(
+					"Failed to switch back to startup directory; skipping session save: " .. tostring(cd_err),
+					vim.log.levels.WARN
+				)
+				return
+			end
+			switched = true
+		end
+
+		local ok_save, save_err = pcall(vim.cmd, "mksession! " .. vim.fn.fnameescape(session_file))
+		if not ok_save then
+			vim.notify("Failed to save session: " .. tostring(save_err), vim.log.levels.WARN)
+		end
+
+		if switched then
+			local ok_rest, rest_err = pcall(vim.cmd, "noautocmd cd " .. vim.fn.fnameescape(current_cwd))
+			if not ok_rest then
+				vim.notify("Failed to restore working directory: " .. tostring(rest_err), vim.log.levels.WARN)
+			end
 		end
 	end,
 })
