@@ -47,7 +47,16 @@ require("conform").setup({
 		if vim.b[bufnr].disable_autoformat then
 			return
 		end
-		return { timeout_ms = 500, lsp_format = "fallback" }
+		-- Prettier's startup can exceed 500 ms; keep other saves responsive.
+		-- Inspect the selected formatter so project-specific choices work too.
+		local timeout_ms = 500
+		for _, formatter in ipairs(require("conform").list_formatters_to_run(bufnr)) do
+			if formatter.name == "prettier" then
+				timeout_ms = 2000
+				break
+			end
+		end
+		return { timeout_ms = timeout_ms, lsp_format = "fallback" }
 	end,
 })
 
