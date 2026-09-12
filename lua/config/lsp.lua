@@ -6,14 +6,6 @@
 -- We use vim.lsp.enable() (Neovim 0.11+) instead of manual setup calls.
 
 -- ============================================================
--- CAPABILITIES (blink.cmp integration)
--- ============================================================
-
-vim.lsp.config("*", {
-	capabilities = require("blink.cmp").get_lsp_capabilities(),
-})
-
--- ============================================================
 -- ENABLE LSP SERVERS
 -- ============================================================
 
@@ -55,8 +47,8 @@ local servers = {
 	-- TOML
 	"taplo",
 
-	-- Dockerfile
-	"dockerls",
+	-- Dockerfile / Compose (official docker-language-server)
+	"docker_language_server",
 }
 
 vim.lsp.enable(servers)
@@ -65,6 +57,7 @@ vim.lsp.enable(servers)
 -- SERVER-SPECIFIC CONFIGURATION
 -- ============================================================
 
+-- 1. Lua: Expose Neovim runtime library for auto-completion & docs on vim.*
 vim.lsp.config("lua_ls", {
 	settings = {
 		Lua = {
@@ -73,7 +66,80 @@ vim.lsp.config("lua_ls", {
 			},
 			workspace = {
 				checkThirdParty = false,
+				library = { vim.env.VIMRUNTIME },
 			},
+		},
+	},
+})
+
+-- 2. Bash: Enable on zsh files (.zshrc, scripts)
+vim.lsp.config("bashls", {
+	filetypes = { "bash", "sh", "zsh" },
+})
+
+-- 3. Ansible: Add .git as fallback root so playbooks start without ansible.cfg
+vim.lsp.config("ansiblels", {
+	root_markers = { "ansible.cfg", ".ansible-lint", ".git" },
+})
+
+-- 4. TypeScript / JavaScript (vtsls): Enable inlay hints (opt-in)
+vim.lsp.config("vtsls", {
+	settings = {
+		typescript = {
+			inlayHints = {
+				parameterNames = { enabled = "all" },
+				parameterTypes = { enabled = true },
+				variableTypes = { enabled = true },
+				propertyDeclarationTypes = { enabled = true },
+				functionLikeReturnTypes = { enabled = true },
+				enumMemberValues = { enabled = true },
+			},
+		},
+		javascript = {
+			inlayHints = {
+				parameterNames = { enabled = "all" },
+				parameterTypes = { enabled = true },
+				variableTypes = { enabled = true },
+				propertyDeclarationTypes = { enabled = true },
+				functionLikeReturnTypes = { enabled = true },
+				enumMemberValues = { enabled = true },
+			},
+		},
+	},
+})
+
+-- 5. Go (gopls): Enable inlay hints (opt-in)
+vim.lsp.config("gopls", {
+	settings = {
+		gopls = {
+			hints = {
+				assignVariableTypes = true,
+				compositeLiteralFields = true,
+				compositeLiteralTypes = true,
+				constantValues = true,
+				functionTypeParameters = true,
+				parameterNames = true,
+				rangeVariableTypes = true,
+			},
+		},
+	},
+})
+
+-- 6. JSON & YAML: Schemastore integration
+vim.lsp.config("jsonls", {
+	settings = {
+		json = {
+			schemas = require("schemastore").json.schemas(),
+			validate = { enable = true },
+		},
+	},
+})
+
+vim.lsp.config("yamlls", {
+	settings = {
+		yaml = {
+			schemaStore = { enable = false, url = "" },
+			schemas = require("schemastore").yaml.schemas(),
 		},
 	},
 })
@@ -124,40 +190,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
 		-- --------------------------------------------------------
 
 		vim.keymap.set("n", "<leader>ld", function()
-			local diags = vim.diagnostic.get(ev.buf)
-
-			table.sort(diags, function(a, b)
-				if a.lnum == b.lnum then
-					return a.col < b.col
-				end
-				return a.lnum < b.lnum
-			end)
-
-			local severity_map = {
-				[vim.diagnostic.severity.ERROR] = "E",
-				[vim.diagnostic.severity.WARN] = "W",
-				[vim.diagnostic.severity.INFO] = "I",
-				[vim.diagnostic.severity.HINT] = "H",
-			}
-
-			local qf_items = {}
-
-			for _, d in ipairs(diags) do
-				table.insert(qf_items, {
-					bufnr = d.bufnr,
-					lnum = d.lnum + 1,
-					col = d.col + 1,
-					text = string.format("[%s] %s", d.source or "LSP", d.message),
-					type = severity_map[d.severity] or "I",
-				})
-			end
-
-			vim.fn.setqflist({}, " ", {
-				title = "Diagnostics",
-				items = qf_items,
-			})
-
-			vim.cmd("copen")
+			vim.diagnostic.setqflist({ bufnr = 0 })
 		end, vim.tbl_extend("force", opts, { desc = "[L]SP [D]iagnostics → quickfix" }))
 
 		-- --------------------------------------------------------
@@ -183,7 +216,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
 		end
 
 		-- --------------------------------------------------------
-		-- Document highlight (best practice: CursorHold only)
+		-- Document highlight
 		-- --------------------------------------------------------
 
 		if client and client:supports_method("textDocument/documentHighlight") then
@@ -195,7 +228,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
 				callback = vim.lsp.buf.document_highlight,
 			})
 
-			vim.api.nvim_create_autocmd("CursorMoved", {
+			vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
 				group = group,
 				buffer = ev.buf,
 				callback = vim.lsp.buf.clear_references,
@@ -204,8 +237,12 @@ vim.api.nvim_create_autocmd("LspAttach", {
 			vim.api.nvim_create_autocmd("LspDetach", {
 				group = vim.api.nvim_create_augroup("user-lsp-detach-" .. ev.buf, { clear = true }),
 				buffer = ev.buf,
-				callback = function()
+				callback = function(detach_ev)
 					vim.lsp.buf.clear_references()
+					vim.api.nvim_clear_autocmds({
+						group = "user-lsp-highlight-" .. detach_ev.buf,
+						buffer = detach_ev.buf,
+					})
 				end,
 			})
 		end

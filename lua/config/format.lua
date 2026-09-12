@@ -30,7 +30,7 @@ require("conform").setup({
 
 		dockerfile = { "dockerfmt" },
 
-		ansible = { "ansible-lint" },
+		["yaml.ansible"] = { "ansible-lint" },
 	},
 
 	-- Format on save (buffer-safe toggle aware)
@@ -71,7 +71,7 @@ require("lint").linters_by_ft = {
 	rust = { "clippy" },
 	go = { "staticcheck" },
 
-	ansible = { "ansible_lint" },
+	["yaml.ansible"] = { "ansible_lint" },
 }
 
 -- Run all configured linters on save; only stdin-based linters on InsertLeave.

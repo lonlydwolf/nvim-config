@@ -59,6 +59,10 @@
       "rev": "b73018b75affd13fa38e2fc94ef753b465f770d7",
       "src": "https://github.com/stevearc/oil.nvim"
     },
+    "schemastore.nvim": {
+      "rev": "05e938c0aa5dfbdbb11972fa4c8a85f27f402ba0",
+      "src": "https://github.com/b0o/schemastore.nvim"
+    },
     "treesitter-parser-registry": {
       "rev": "6eb15358bb9fc88f0d3401d8538d56652e9bdf3c",
       "src": "https://github.com/neovim-treesitter/treesitter-parser-registry"

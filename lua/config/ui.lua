@@ -42,9 +42,13 @@ require("catppuccin").setup({
 })
 vim.cmd.colorscheme("catppuccin")
 
--- Transparent Blink Menu and Signature
+-- Transparent Blink Windows and Borders
 vim.api.nvim_set_hl(0, "Pmenu", { bg = "none" })
 vim.api.nvim_set_hl(0, "BlinkCmpMenuBorder", { fg = "#89b4fa", bg = "none" })
+vim.api.nvim_set_hl(0, "BlinkCmpSignatureHelp", { bg = "none" })
+vim.api.nvim_set_hl(0, "BlinkCmpSignatureHelpBorder", { fg = "#89b4fa", bg = "none" })
+vim.api.nvim_set_hl(0, "BlinkCmpDoc", { bg = "none" })
+vim.api.nvim_set_hl(0, "BlinkCmpDocBorder", { fg = "#89b4fa", bg = "none" })
 
 require("mini.statusline").setup()
 

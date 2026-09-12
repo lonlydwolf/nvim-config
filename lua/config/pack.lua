@@ -9,6 +9,7 @@ vim.pack.add({
 	-- LSP: server configs only, no .setup() calls -- driven via native
 	-- vim.lsp.enable() in config/lsp.lua
 	{ src = "https://github.com/neovim/nvim-lspconfig" },
+	{ src = "https://github.com/b0o/schemastore.nvim" },
 
 	-- Completion. blink.cmp downloads a prebuilt fuzzy-matcher binary on first
 	-- run; if that fails on your platform, `cargo build --release` inside the
