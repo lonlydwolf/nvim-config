@@ -57,12 +57,23 @@ map("n", "<leader>tW", function()
 end, { desc = "[T]oggle [W]rap" })
 
 -- Native floating terminal toggle
-local term_buf, term_win = nil, nil
+local term_buf, term_win, term_job = nil, nil, nil
 local function toggle_terminal()
+	-- If floating window is open and valid, toggle it closed
 	if term_win and vim.api.nvim_win_is_valid(term_win) then
 		vim.api.nvim_win_close(term_win, false)
 		term_win = nil
 		return
+	end
+
+	-- If old shell has exited or buffer is invalid, discard and recreate state
+	if not (term_buf and vim.api.nvim_buf_is_valid(term_buf) and term_job ~= nil) then
+		if term_buf and vim.api.nvim_buf_is_valid(term_buf) then
+			pcall(vim.api.nvim_buf_delete, term_buf, { force = true })
+		end
+		term_buf = vim.api.nvim_create_buf(false, true)
+		vim.bo[term_buf].bufhidden = "hide"
+		term_job = nil
 	end
 
 	local width = math.floor(vim.o.columns * 0.8)
@@ -77,14 +88,42 @@ local function toggle_terminal()
 		border = "rounded",
 	}
 
-	if term_buf and vim.api.nvim_buf_is_valid(term_buf) then
-		term_win = vim.api.nvim_open_win(term_buf, true, win_opts)
-	else
-		term_buf = vim.api.nvim_create_buf(false, true)
-		term_win = vim.api.nvim_open_win(term_buf, true, win_opts)
-		vim.fn.jobstart(vim.o.shell, { term = true })
-		vim.cmd.startinsert()
+	term_win = vim.api.nvim_open_win(term_buf, true, win_opts)
+
+	-- Start shell if not already running
+	if term_job == nil then
+		local ok, job_or_err = pcall(vim.fn.jobstart, vim.o.shell, {
+			term = true,
+			on_exit = function(job_id)
+				-- Ensure callback only clears state if it belongs to the tracked job
+				if term_job == job_id then
+					term_job = nil
+				end
+			end,
+		})
+
+		if not ok or type(job_or_err) ~= "number" or job_or_err <= 0 then
+			local err_msg = not ok and tostring(job_or_err)
+				or (job_or_err == 0 and "invalid arguments" or "executable not found or cannot start")
+			vim.notify("Failed to start terminal shell: " .. err_msg, vim.log.levels.ERROR)
+
+			term_job = nil
+			if term_win and vim.api.nvim_win_is_valid(term_win) then
+				vim.api.nvim_win_close(term_win, false)
+				term_win = nil
+			end
+			if term_buf and vim.api.nvim_buf_is_valid(term_buf) then
+				pcall(vim.api.nvim_buf_delete, term_buf, { force = true })
+				term_buf = nil
+			end
+			return
+		end
+
+		term_job = job_or_err
 	end
+
+	-- Enter terminal-input mode on open and reopen
+	vim.cmd.startinsert()
 end
 
 map({ "n", "t" }, "<leader>tt", toggle_terminal, { desc = "[T]oggle [T]erminal (floating)" })
