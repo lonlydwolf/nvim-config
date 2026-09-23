@@ -23,11 +23,8 @@ vim.pack.add({
 	-- File explorer (edit the filesystem like a buffer)
 	{ src = "https://github.com/stevearc/oil.nvim" },
 
-	-- Treesitter -- community fork. The original neovim/nvim-treesitter was
-	-- archived April 2026; this fork is an incompatible rewrite (distributed
-	-- parser/query registry), which is fine since we're starting fresh.
-	{ src = "https://github.com/neovim-treesitter/treesitter-parser-registry" },
-	{ src = "https://github.com/neovim-treesitter/nvim-treesitter", version = "main" },
+	-- Treesitter -- upstream's rewritten API on main.
+	{ src = "https://github.com/nvim-treesitter/nvim-treesitter", version = "main" },
 
 	-- Structural text objects, motions, and argument/element swaps -- mini.ai
 	-- only covers selection, not motion or swap, so this fills that gap
