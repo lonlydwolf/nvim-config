@@ -1,0 +1,3 @@
+# Passed to hadolint when neither the project nor the user has a config, so it
+# uses its defaults instead of picking up a .hadolint.yaml from Neovim's cwd.
+ignored: []

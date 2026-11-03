@@ -13,8 +13,8 @@ require("conform").setup({
 		typescript = { "biome" },
 		typescriptreact = { "biome" },
 
-		c = { "clang_format" },
-		cpp = { "clang_format" },
+		c = { "clang-format" },
+		cpp = { "clang-format" },
 
 		rust = { "rustfmt" },
 		go = { "goimports" },
@@ -29,17 +29,8 @@ require("conform").setup({
 		json = { "biome" },
 
 		dockerfile = { "dockerfmt" },
-
-		-- Ordinary saves only format YAML; broad lint fixes require :AnsibleFix.
-		["yaml.ansible"] = { "prettier" },
-	},
-
-	formatters = {
-		prettier = {
-			options = {
-				ft_parsers = { ["yaml.ansible"] = "yaml" },
-			},
-		},
+		-- yaml.ansible needs no entry: conform falls back to "yaml" (prettier),
+		-- and Prettier infers YAML from the filename. Lint fixes need :AnsibleFix.
 	},
 
 	-- Format on save (buffer-safe toggle aware)
@@ -98,7 +89,8 @@ end, { desc = "[T]oggle [F]ormat on save (buffer)" })
 -- Principle:
 -- Only run linters that provide meaningful analysis beyond LSP or formatter tools.
 
-require("lint").linters_by_ft = {
+local lint = require("lint")
+lint.linters_by_ft = {
 	dockerfile = { "hadolint" },
 	yaml = { "yamllint" },
 	["yaml.ansible"] = {}, -- Suppress yamllint fallback; ansiblels owns Ansible linting
@@ -106,11 +98,60 @@ require("lint").linters_by_ft = {
 	cpp = { "clangtidy" },
 }
 
+-- clang-tidy only ships in Homebrew's keg-only llvm, which isn't on PATH.
+local brew_tidy = "/opt/homebrew/opt/llvm/bin/clang-tidy"
+if vim.fn.executable("clang-tidy") == 0 and vim.fn.executable(brew_tidy) == 1 then
+	lint.linters.clangtidy.cmd = brew_tidy
+end
+
+-- yamllint and hadolint look for a project config from the cwd, so a file in
+-- another project (or a nested dir like src/) gets the wrong rules. Resolve it
+-- here instead, in the tool's own order but starting from the file, and always
+-- pass the result so the tool never searches Neovim's cwd:
+-- nearest project config above the file > user-wide config > tool defaults.
+-- (try_lint's `cwd` option can't be used: nvim-lint implements it with a
+-- global :cd, which clears :lcd/:tcd.)
+local function with_config(name, flag, project_files, user_files, defaults)
+	local linter = lint.linters[name]
+	lint.linters[name] = function()
+		local file = vim.api.nvim_buf_get_name(0)
+		local config = file ~= ""
+			and vim.fs.find(project_files, { path = vim.fs.dirname(file), upward = true, type = "file" })[1]
+		config = config
+			or vim.iter(user_files):map(vim.fs.normalize):find(function(f)
+				return vim.fn.filereadable(f) == 1
+			end)
+		local config_args = config and { flag, config } or defaults
+		return vim.tbl_extend(
+			"force",
+			linter,
+			{ args = vim.list_extend(vim.list_extend({}, config_args), linter.args) }
+		)
+	end
+end
+local xdg = vim.env.XDG_CONFIG_HOME or "~/.config"
+with_config(
+	"yamllint",
+	"-c",
+	{ ".yamllint", ".yamllint.yaml", ".yamllint.yml" },
+	{ vim.env.YAMLLINT_CONFIG_FILE or xdg .. "/yamllint/config" },
+	{ "-d", "default" }
+)
+with_config("hadolint", "--config", { ".hadolint.yaml", ".hadolint.yml" }, {
+	xdg .. "/hadolint.yaml",
+	xdg .. "/hadolint.yml",
+	"~/.hadolint/hadolint.yaml",
+	"~/.hadolint/hadolint.yml",
+	"~/.hadolint/config.yaml",
+	"~/.hadolint/config.yml",
+	"~/.hadolint.yaml",
+	"~/.hadolint.yml",
+}, { "--config", vim.fn.stdpath("config") .. "/lint/hadolint-defaults.yaml" })
+
 -- Run all configured linters on save; only stdin-based linters on InsertLeave.
 vim.api.nvim_create_autocmd({ "BufWritePost", "InsertLeave" }, {
 	group = vim.api.nvim_create_augroup("user-lint", { clear = true }),
 	callback = function(ev)
-		local lint = require("lint")
 		if ev.event == "InsertLeave" then
 			-- Disk-based tools would inspect stale files and may trigger expensive builds.
 			lint.try_lint(nil, { filter = "stdin" })
