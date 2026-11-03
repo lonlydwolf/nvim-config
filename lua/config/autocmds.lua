@@ -140,6 +140,14 @@ vim.api.nvim_create_autocmd("VimLeavePre", {
 })
 
 vim.filetype.add({
+	-- docker_language_server only attaches to yaml.docker-compose. yamlls, prettier
+	-- and yamllint still apply, since they all fall back to "yaml".
+	filename = {
+		["compose.yaml"] = "yaml.docker-compose",
+		["compose.yml"] = "yaml.docker-compose",
+		["docker-compose.yaml"] = "yaml.docker-compose",
+		["docker-compose.yml"] = "yaml.docker-compose",
+	},
 	pattern = {
 		[".*/playbooks/.*%.ya?ml"] = "yaml.ansible",
 		[".*/tasks/.*%.ya?ml"] = "yaml.ansible",
