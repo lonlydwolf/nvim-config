@@ -18,6 +18,11 @@ vim.api.nvim_create_autocmd("BufReadPost", {
 	group = augroup,
 	desc = "Jump to last known cursor position",
 	callback = function(ev)
+		-- COMMIT_EDITMSG reuses one path, so its saved cursor is from an old commit.
+		-- (Filetype isn't detected yet at this point, so match the name.)
+		if vim.fs.basename(ev.file) == "COMMIT_EDITMSG" then
+			return
+		end
 		local mark = vim.api.nvim_buf_get_mark(ev.buf, '"')
 		local line_count = vim.api.nvim_buf_line_count(ev.buf)
 		if mark[1] > 0 and mark[1] <= line_count then

@@ -3,7 +3,7 @@
 -- ============================================================
 
 -- nvim-lspconfig ships server definitions under lsp/*.lua.
--- We use vim.lsp.enable() (Neovim 0.11+) instead of manual setup calls.
+-- We use vim.lsp.enable() instead of manual setup calls. Requires Neovim 0.12+ (vim.pack).
 
 -- ============================================================
 -- ENABLE LSP SERVERS

@@ -5,6 +5,18 @@
 -- Must be set before vim-tmux-navigator loads to suppress its default mappings
 vim.g.tmux_navigator_no_mappings = 1
 
+-- Keep compiled parsers in step with nvim-treesitter's queries after vim.pack.update().
+vim.api.nvim_create_autocmd("PackChanged", {
+	callback = function(ev)
+		if ev.data.spec.name == "nvim-treesitter" and ev.data.kind == "update" then
+			if not ev.data.active then
+				vim.cmd.packadd("nvim-treesitter")
+			end
+			vim.cmd("TSUpdate")
+		end
+	end,
+})
+
 vim.pack.add({
 	-- LSP: server configs only, no .setup() calls -- driven via native
 	-- vim.lsp.enable() in config/lsp.lua

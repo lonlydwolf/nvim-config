@@ -28,8 +28,13 @@ map("n", "<Esc>", "<cmd>nohlsearch<CR>")
 -- Keep the cursor centered after jump-style movements (search, half-page
 -- scroll, diagnostic jumps), without forcing permanent centering via
 -- scrolloff during ordinary line-by-line movement.
-map("n", "n", "nzz", { desc = "Next search match (centered)" })
-map("n", "N", "Nzz", { desc = "Previous search match (centered)" })
+-- hlslens only draws its lens after start(); `/` triggers that, n/N/*/# don't.
+local lens = "<Cmd>lua require('hlslens').start()<CR>"
+map("n", "n", "nzz" .. lens, { desc = "Next search match (centered)" })
+map("n", "N", "Nzz" .. lens, { desc = "Previous search match (centered)" })
+for _, key in ipairs({ "*", "#", "g*", "g#" }) do
+	map("n", key, key .. lens, { desc = "Search word under cursor (" .. key .. ")" })
+end
 map("n", "<C-d>", "<C-d>zz", { desc = "Half page down (centered)" })
 map("n", "<C-u>", "<C-u>zz", { desc = "Half page up (centered)" })
 local function center()
