@@ -126,7 +126,9 @@ local function toggle_terminal()
 	vim.cmd.startinsert()
 end
 
-map({ "n", "t" }, "<leader>tt", toggle_terminal, { desc = "[T]oggle [T]erminal (floating)" })
+-- Normal mode only: a <Space>-prefixed map in terminal mode eats typed text.
+-- Leave the shell with <Esc><Esc>, then <leader>tt.
+map("n", "<leader>tt", toggle_terminal, { desc = "[T]oggle [T]erminal (floating)" })
 map("t", "<Esc><Esc>", "<C-\\><C-n>", { desc = "Exit terminal mode" })
 
 -- Manual session save (auto save/restore-by-cwd lives in autocmds.lua).
