@@ -32,13 +32,14 @@ map("n", "n", "nzz", { desc = "Next search match (centered)" })
 map("n", "N", "Nzz", { desc = "Previous search match (centered)" })
 map("n", "<C-d>", "<C-d>zz", { desc = "Half page down (centered)" })
 map("n", "<C-u>", "<C-u>zz", { desc = "Half page up (centered)" })
-map("n", "[d", function()
-	vim.diagnostic.jump({ count = -1, float = false })
+local function center()
 	vim.cmd("normal! zz")
+end
+map("n", "[d", function()
+	vim.diagnostic.jump({ count = -vim.v.count1, on_jump = center })
 end, { desc = "Previous diagnostic (centered)" })
 map("n", "]d", function()
-	vim.diagnostic.jump({ count = 1, float = false })
-	vim.cmd("normal! zz")
+	vim.diagnostic.jump({ count = vim.v.count1, on_jump = center })
 end, { desc = "Next diagnostic (centered)" })
 
 -- Paste over a visual selection without the deleted selection overwriting

@@ -160,7 +160,7 @@ require("gitsigns").setup({
 	on_attach = function(bufnr)
 		local gs = require("gitsigns")
 		local function gmap(mode, lhs, rhs, desc)
-			vim.keymap.set(mode, lhs, rhs, { buffer = bufnr, desc = desc })
+			vim.keymap.set(mode, lhs, rhs, { buf = bufnr, desc = desc })
 		end
 
 		-- Navigation lives on brackets (same family as native [d/]d), actions
