@@ -182,7 +182,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
 	group = vim.api.nvim_create_augroup("user-lsp-attach", { clear = true }),
 
 	callback = function(ev)
-		local opts = { buffer = ev.buf }
+		local opts = { buf = ev.buf }
 		local client = vim.lsp.get_client_by_id(ev.data.client_id)
 		local fzf = require("fzf-lua")
 
@@ -271,19 +271,19 @@ vim.api.nvim_create_autocmd("LspAttach", {
 
 			vim.api.nvim_create_autocmd("CursorHold", {
 				group = group,
-				buffer = ev.buf,
+				buf = ev.buf,
 				callback = vim.lsp.buf.document_highlight,
 			})
 
 			vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
 				group = group,
-				buffer = ev.buf,
+				buf = ev.buf,
 				callback = vim.lsp.buf.clear_references,
 			})
 
 			vim.api.nvim_create_autocmd("LspDetach", {
 				group = vim.api.nvim_create_augroup("user-lsp-detach-" .. ev.buf, { clear = true }),
-				buffer = ev.buf,
+				buf = ev.buf,
 				callback = function(detach_ev)
 					local departing_id = detach_ev.data and detach_ev.data.client_id
 					local remaining_has_highlight = vim.iter(vim.lsp.get_clients({ bufnr = detach_ev.buf }))
@@ -297,7 +297,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
 						end
 						vim.api.nvim_clear_autocmds({
 							group = "user-lsp-highlight-" .. detach_ev.buf,
-							buffer = detach_ev.buf,
+							buf = detach_ev.buf,
 						})
 					end
 				end,
