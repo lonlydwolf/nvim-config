@@ -78,6 +78,12 @@ vim.api.nvim_create_autocmd("VimEnter", {
 	desc = "Auto-restore session for this project on startup",
 	nested = true,
 	callback = function()
+		-- `nvim -S file.vim` already loaded a session: don't replace it, and don't
+		-- overwrite this project's auto-session with it on exit.
+		if vim.v.this_session ~= "" then
+			session_enabled = false
+			return
+		end
 		-- Safety guards: no file arguments, not piped, not headless
 		if not session_enabled or is_piped or #vim.api.nvim_list_uis() == 0 then
 			session_enabled = false
@@ -110,31 +116,11 @@ vim.api.nvim_create_autocmd("VimLeavePre", {
 			return
 		end
 
-		-- Preserve session identity if directory was changed during the session
-		local current_cwd = vim.fn.getcwd()
-		local switched = false
-		if current_cwd ~= startup_cwd then
-			local ok_cd, cd_err = pcall(vim.cmd, "noautocmd cd " .. vim.fn.fnameescape(startup_cwd))
-			if not ok_cd then
-				vim.notify(
-					"Failed to switch back to startup directory; skipping session save: " .. tostring(cd_err),
-					vim.log.levels.WARN
-				)
-				return
-			end
-			switched = true
-		end
-
+		-- session_file is keyed to startup_cwd, so no `cd` is needed here; a global
+		-- :cd would clear window/tab-local directories before they're recorded.
 		local ok_save, save_err = pcall(vim.cmd, "mksession! " .. vim.fn.fnameescape(session_file))
 		if not ok_save then
 			vim.notify("Failed to save session: " .. tostring(save_err), vim.log.levels.WARN)
-		end
-
-		if switched then
-			local ok_rest, rest_err = pcall(vim.cmd, "noautocmd cd " .. vim.fn.fnameescape(current_cwd))
-			if not ok_rest then
-				vim.notify("Failed to restore working directory: " .. tostring(rest_err), vim.log.levels.WARN)
-			end
 		end
 	end,
 })
