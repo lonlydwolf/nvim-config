@@ -22,6 +22,14 @@ require("catppuccin").setup({
 			SelectMode = { fg = colors.teal, bold = true },
 			TerminalMode = { fg = colors.teal, bold = true },
 			TerminalNormalMode = { fg = colors.blue, bold = true },
+
+			-- Transparent Blink windows (here, so `:colorscheme catppuccin` keeps them)
+			Pmenu = { bg = colors.none },
+			BlinkCmpMenuBorder = { fg = colors.blue, bg = colors.none },
+			BlinkCmpSignatureHelp = { bg = colors.none },
+			BlinkCmpSignatureHelpBorder = { fg = colors.blue, bg = colors.none },
+			BlinkCmpDoc = { bg = colors.none },
+			BlinkCmpDocBorder = { fg = colors.blue, bg = colors.none },
 		}
 	end,
 	integrations = {
@@ -41,14 +49,6 @@ require("catppuccin").setup({
 	},
 })
 vim.cmd.colorscheme("catppuccin")
-
--- Transparent Blink Windows and Borders
-vim.api.nvim_set_hl(0, "Pmenu", { bg = "none" })
-vim.api.nvim_set_hl(0, "BlinkCmpMenuBorder", { fg = "#89b4fa", bg = "none" })
-vim.api.nvim_set_hl(0, "BlinkCmpSignatureHelp", { bg = "none" })
-vim.api.nvim_set_hl(0, "BlinkCmpSignatureHelpBorder", { fg = "#89b4fa", bg = "none" })
-vim.api.nvim_set_hl(0, "BlinkCmpDoc", { bg = "none" })
-vim.api.nvim_set_hl(0, "BlinkCmpDocBorder", { fg = "#89b4fa", bg = "none" })
 
 require("mini.statusline").setup()
 
@@ -76,13 +76,9 @@ require("mini.notify").setup({
 				if n.msg == "" then
 					return false
 				end
-				-- Block persistent background loops
-				if n.msg:find("Diagnosing") then
-					return false
-				end
-				-- Block pyright & basedpyright
+				-- Block pyright/basedpyright progress and "Diagnosing" loops
 				if n.data and n.data.source == "lsp_progress" then
-					return not lsp_progress_blocklist[n.data.client_name]
+					return not (lsp_progress_blocklist[n.data.client_name] or n.msg:find("Diagnosing", 1, true))
 				end
 
 				return true

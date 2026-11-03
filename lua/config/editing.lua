@@ -8,7 +8,7 @@ require("oil").setup({
 })
 vim.keymap.set("n", "-", "<CMD>Oil<CR>", { desc = "Open parent directory (Oil)" })
 
--- Treesitter (community fork). ensure_installed is no longer a setup()
+-- Treesitter (upstream, main branch). ensure_installed is no longer a setup()
 -- option in the rewrite -- you call install() yourself. This diffs against
 -- what's already installed so it doesn't reinstall on every launch.
 require("nvim-treesitter").setup({
@@ -47,7 +47,7 @@ if #to_install > 0 then
 	require("nvim-treesitter").install(to_install)
 end
 
--- Installing parsers does not enable highlighting in the community fork.
+-- Installing parsers does not enable highlighting on the main branch.
 vim.api.nvim_create_autocmd("FileType", {
 	group = vim.api.nvim_create_augroup("user-treesitter-highlight", { clear = true }),
 	desc = "Enable Treesitter highlighting when a parser is available",
@@ -55,8 +55,11 @@ vim.api.nvim_create_autocmd("FileType", {
 		if vim.bo[ev.buf].buftype ~= "" then
 			return
 		end
-		-- Unsupported filetypes or parsers still being installed must not block opening files.
-		pcall(vim.treesitter.start, ev.buf)
+		-- Skip quietly when no parser is available; let real errors (broken queries) show.
+		local lang = vim.treesitter.language.get_lang(vim.bo[ev.buf].filetype)
+		if lang and vim.treesitter.language.add(lang) then
+			vim.treesitter.start(ev.buf, lang)
+		end
 	end,
 })
 
@@ -137,7 +140,7 @@ end, { desc = "Swap previous parameter" })
 -- which nvim-treesitter-textobjects handles above)
 require("mini.ai").setup()
 
--- Add/change/delete surrounding pairs: ys/cs/ds-style operators
+-- Add/replace/delete surrounding pairs: sa / sr / sd
 require("mini.surround").setup()
 
 -- Auto-close brackets/quotes
