@@ -77,16 +77,20 @@ opt.listchars = { tab = "» ", trail = "." }
 
 -- Ensure mise-managed tools (LSPs, formatters, linters) are always found,
 -- even when nvim is launched from a GUI that never sourced .zshrc.
-local ok, obj = pcall(function()
-	-- Bounded: a hung mise must not hang startup (on timeout wait() kills it, code 124).
-	return vim.system({ "mise", "bin-paths" }, { text = true }):wait(2000)
-end)
+-- A shell with `mise activate` has already put the install dirs on PATH, so
+-- the (synchronous, ~27 ms) call is only made when they are missing.
+if not (vim.env.PATH or ""):find("/mise/installs/", 1, true) then
+	local ok, obj = pcall(function()
+		-- Bounded: a hung mise must not hang startup (on timeout wait() kills it, code 124).
+		return vim.system({ "mise", "bin-paths" }, { text = true }):wait(2000)
+	end)
 
-if ok and obj.code == 0 then
-	local stdout = vim.trim(obj.stdout)
+	if ok and obj.code == 0 then
+		local stdout = vim.trim(obj.stdout)
 
-	if stdout ~= "" then
-		local dirs = vim.split(stdout, "\n", { trimempty = true })
-		vim.env.PATH = table.concat(dirs, ":") .. ":" .. vim.env.PATH
+		if stdout ~= "" then
+			local dirs = vim.split(stdout, "\n", { trimempty = true })
+			vim.env.PATH = table.concat(dirs, ":") .. ":" .. vim.env.PATH
+		end
 	end
 end
