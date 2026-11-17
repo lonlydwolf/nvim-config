@@ -118,12 +118,15 @@ vim.api.nvim_create_user_command("TutorSandbox", function(opts)
 		vim.notify("Tutor sandbox ready: " .. vim.fn.fnamemodify(sandbox, ":~"))
 	end
 
-	-- Reuse the sandbox tab if there is one.
+	-- Reuse the sandbox tab if there is one. Set its directory again: after a
+	-- failed rebuild removed the sandbox, Neovim was left outside it, and
+	-- selecting the tab that is already current does not change directory.
 	local real = vim.uv.fs_realpath(sandbox) or sandbox
 	for _, tab in ipairs(vim.api.nvim_list_tabpages()) do
 		local nr = vim.api.nvim_tabpage_get_number(tab)
 		if vim.fn.haslocaldir(-1, nr) == 1 and (vim.uv.fs_realpath(vim.fn.getcwd(-1, nr)) or "") == real then
 			vim.api.nvim_set_current_tabpage(tab)
+			vim.cmd.tcd(vim.fn.fnameescape(sandbox))
 			return
 		end
 	end
