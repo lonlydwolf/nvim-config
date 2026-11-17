@@ -3,7 +3,21 @@
 -- ============================================================
 
 local fzf = require("fzf-lua")
-fzf.setup({})
+fzf.setup({
+	diagnostics = {
+		actions = {
+			-- Copy the selected diagnostics in full (Tab multi-selects, alt-a selects
+			-- all); the picker stays open. Same format as <leader>yd (yank.lua).
+			["ctrl-y"] = {
+				fn = function(selected, opts)
+					require("config.yank").picker_diagnostics(selected, opts)
+				end,
+				exec_silent = true,
+				desc = "copy-diagnostics",
+			},
+		},
+	},
+})
 fzf.register_ui_select()
 
 local map = vim.keymap.set

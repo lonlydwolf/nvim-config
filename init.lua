@@ -17,6 +17,7 @@ local modules = {
 	"config.editing", -- oil, treesitter, mini.ai/surround/pairs/indentscope, gitsigns
 	"config.ui", -- catppuccin, mini.statusline, mini.notify, which-key
 	"config.keymaps", -- general keymaps, terminal toggle, session save
+	"config.yank", -- <leader>y: copy diagnostics, file references, code with context
 	"config.autocmds", -- yank flash, session save/restore
 }
 
