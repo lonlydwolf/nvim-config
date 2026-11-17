@@ -213,6 +213,50 @@ require("mini.bufremove").setup()
 -- <leader>gp, reject a hunk with <leader>gr, list all with <leader>qh.
 local jj = require("config.jj")
 
+-- <leader>gt state: the base each repository's gutter compares against while it
+-- shows "everything since trunk", keyed by repository root. Per repository,
+-- because a commit from one repository does not exist in another.
+local trunk_bases = {} ---@type table<string, string>
+
+---@param bufnr integer
+---@return string? root the buffer's repository root, as gitsigns resolved it
+local function repo_root(bufnr)
+	local status = vim.b[bufnr].gitsigns_status_dict
+	return status and status.root
+end
+
+-- Point one buffer's gutter at `base` (nil: back to the current change). Its
+-- "base: trunk" statusline marker follows the result, not the request.
+---@param bufnr integer
+---@param base string?
+local function set_buffer_base(bufnr, base)
+	vim.api.nvim_buf_call(bufnr, function()
+		require("gitsigns").change_base(base, false, function(err)
+			vim.schedule(function()
+				if not vim.api.nvim_buf_is_valid(bufnr) then
+					return
+				end
+				if err then
+					local name = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(bufnr), ":~:.")
+					vim.notify(("Could not change the diff base of %s: %s"):format(name, err), vim.log.levels.WARN)
+					return
+				end
+				vim.b[bufnr].gitsigns_base_is_trunk = base ~= nil
+				vim.cmd.redrawstatus({ bang = true })
+			end)
+		end)
+	end)
+end
+
+---@param root string
+local function set_repo_base(root, base)
+	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+		if vim.api.nvim_buf_is_loaded(buf) and repo_root(buf) == root then
+			set_buffer_base(buf, base)
+		end
+	end
+end
+
 require("gitsigns").setup({
 	-- A file jj has not snapshotted yet is untracked to git. Attach anyway, so a
 	-- newly created file shows up in the gutter and in <leader>qh.
@@ -221,6 +265,29 @@ require("gitsigns").setup({
 		local gs = require("gitsigns")
 		local function gmap(mode, lhs, rhs, desc)
 			vim.keymap.set(mode, lhs, rhs, { buf = bufnr, desc = desc })
+		end
+
+		-- Every attach (a newly opened file, or a reload after :edit or an
+		-- external change) starts from the default base, so reset the marker,
+		-- and re-apply the trunk base if this repository has one. That has to
+		-- wait for gitsigns' own first update of the buffer, which would
+		-- otherwise overwrite it.
+		vim.b[bufnr].gitsigns_base_is_trunk = false
+		local root = repo_root(bufnr)
+		if root and trunk_bases[root] then
+			vim.api.nvim_create_autocmd("User", {
+				pattern = "GitSignsUpdate",
+				desc = "Re-apply the trunk diff base after gitsigns attaches",
+				callback = function(ev)
+					if not (ev.data and ev.data.buffer == bufnr) then
+						return
+					end
+					if vim.api.nvim_buf_is_valid(bufnr) and trunk_bases[root] then
+						set_buffer_base(bufnr, trunk_bases[root])
+					end
+					return true -- once
+				end,
+			})
 		end
 
 		-- Navigation lives on brackets (same family as native [d/]d), actions
@@ -252,12 +319,16 @@ require("gitsigns").setup({
 		end
 
 		-- Widen the gutter from "the current change" to "everything since
-		-- trunk", for reviewing a whole stack or branch. Applies to all buffers;
-		-- the statusline shows "base: trunk" while it is on.
+		-- trunk", for reviewing a whole stack or branch. Applies to every open
+		-- buffer of this repository; the statusline shows "base: trunk" there.
 		gmap("n", "<leader>gt", function()
-			if vim.g.gitsigns_base_is_trunk then
-				gs.reset_base(true)
-				vim.g.gitsigns_base_is_trunk = false
+			local repo = repo_root(bufnr)
+			if not repo then
+				return
+			end
+			if trunk_bases[repo] then
+				trunk_bases[repo] = nil
+				set_repo_base(repo, nil)
 				vim.notify("Gutter shows the current change")
 				return
 			end
@@ -276,9 +347,9 @@ require("gitsigns").setup({
 				vim.notify("Could not find trunk for this repository", vim.log.levels.WARN)
 				return
 			end
-			gs.change_base(base, true)
-			vim.g.gitsigns_base_is_trunk = true
-			vim.notify("Gutter shows everything since trunk")
+			trunk_bases[repo] = base
+			set_repo_base(repo, base)
+			vim.notify("Gutter shows everything since trunk in " .. vim.fn.fnamemodify(repo, ":~"))
 		end, "[G]it: toggle diff base (current change / [T]runk)")
 	end,
 })

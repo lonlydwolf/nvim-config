@@ -67,7 +67,7 @@ end
 -- Shown while the gutter compares against trunk instead of the current
 -- change's parent (<leader>gt, editing.lua).
 local function section_diff_base()
-	return vim.g.gitsigns_base_is_trunk and "base: trunk" or ""
+	return vim.b.gitsigns_base_is_trunk and "base: trunk" or ""
 end
 
 -- Shown while format-on-save is toggled off (<leader>tf / <leader>tF).
