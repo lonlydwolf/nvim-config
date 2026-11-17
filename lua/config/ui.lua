@@ -59,14 +59,15 @@ local lsp_progress_blocklist = {
 	basedpyright = true,
 }
 
-require("mini.notify").setup({
+local notify = require("mini.notify")
+notify.setup({
 	content = {
 		-- Clean Format: Strip timestamp and borders from LSP progress bars
 		format = function(notif)
 			if notif.data.source == "lsp_progress" then
 				return notif.msg -- Return only the message text
 			end
-			return MiniNotify.default_format(notif) -- -- Keeps standard timestamps for regular toast notifications
+			return notify.default_format(notif) -- Keeps standard timestamps for regular toast notifications
 		end,
 
 		-- Ignore Unnecessary Info: Filter out background noise and spam before rendering
@@ -84,11 +85,14 @@ require("mini.notify").setup({
 				return true
 			end, notif_arr)
 
-			return MiniNotify.default_sort(filtered)
+			return notify.default_sort(filtered)
 		end,
 	},
 })
-vim.notify = require("mini.notify").make_notify()
+-- Toasts never reach :messages, so errors stay up longer (default 5 s) and
+-- <leader>n reopens everything shown this session in a normal, yankable buffer.
+vim.notify = notify.make_notify({ ERROR = { duration = 10000 } })
+vim.keymap.set("n", "<leader>n", notify.show_history, { desc = "[N]otification history" })
 
 -- Initialize the icon provider
 require("mini.icons").setup({
