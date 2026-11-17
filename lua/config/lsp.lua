@@ -166,21 +166,28 @@ vim.lsp.config("gopls", {
 	},
 })
 
--- 6. JSON & YAML: Schemastore integration
+-- 6. JSON & YAML: Schemastore integration. The catalogs are several thousand
+-- lines, so they are attached when a server starts (before_init) rather than
+-- stored in the static config, where they made `:checkhealth vim.lsp`
+-- unreadable and were built at every startup.
 vim.lsp.config("jsonls", {
+	before_init = function(_, config)
+		config.settings.json.schemas = require("schemastore").json.schemas()
+	end,
 	settings = {
 		json = {
-			schemas = require("schemastore").json.schemas(),
 			validate = { enable = true },
 		},
 	},
 })
 
 vim.lsp.config("yamlls", {
+	before_init = function(_, config)
+		config.settings.yaml.schemas = require("schemastore").yaml.schemas()
+	end,
 	settings = {
 		yaml = {
 			schemaStore = { enable = false, url = "" },
-			schemas = require("schemastore").yaml.schemas(),
 		},
 	},
 })
