@@ -42,18 +42,14 @@ opt.clipboard:append("unnamedplus") -- Use system clipboard
 -- copied from this Neovim instead of querying the terminal: with unnamedplus
 -- every `p` would otherwise wait for an answer many terminals never send. Use
 -- the terminal's own paste for text copied elsewhere.
+-- "No clipboard tool" is Neovim's own answer, so every provider it supports
+-- counts (pbcopy, wl-copy, xclip, lemonade, win32yank, termux, tmux, ...).
+-- With 'clipboard' already set it never picks OSC 52 itself, so "" means none.
 local function has_clipboard_tool()
-	local function exe(name)
-		return vim.fn.executable(name) == 1
-	end
-	return exe("pbcopy")
-		or (vim.env.WAYLAND_DISPLAY and exe("wl-copy"))
-		or (vim.env.DISPLAY and (exe("xsel") or exe("xclip")))
-		or exe("win32yank.exe")
-		or (vim.env.TMUX and exe("tmux")) -- tmux buffer; `set-clipboard on` forwards it
+	return vim.fn["provider#clipboard#Executable"]() ~= ""
 end
 
-if not vim.g.clipboard and not has_clipboard_tool() then
+if vim.g.clipboard == nil and not has_clipboard_tool() then
 	local osc52 = require("vim.ui.clipboard.osc52")
 	local last = { {}, "v" }
 	local function copy(reg)
