@@ -57,6 +57,12 @@ vim.pack.add({
 	-- fine against a colocated jj/git backend
 	{ src = "https://github.com/lewis6991/gitsigns.nvim" },
 
+	-- jj's diff editor: pick hunks and lines for `jj split`, `jj squash -i`,
+	-- `jj commit -i` ... in Neovim (wired up in ~/.config/jj/config.toml).
+	-- nui.nvim is its UI dependency.
+	{ src = "https://github.com/MunifTanjim/nui.nvim" },
+	{ src = "https://github.com/julienvincent/hunk.nvim" },
+
 	-- Formatting + linting via CLI tools (not LSP servers)
 	{ src = "https://github.com/stevearc/conform.nvim" },
 	{ src = "https://github.com/mfussenegger/nvim-lint" },

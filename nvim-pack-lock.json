@@ -25,6 +25,10 @@
       "rev": "dc7698f932792a764d3db95fedee26c38e728355",
       "src": "https://github.com/lewis6991/gitsigns.nvim"
     },
+    "hunk.nvim": {
+      "rev": "0c75192802f2a12020155cdb92a0f7b723cef499",
+      "src": "https://github.com/julienvincent/hunk.nvim"
+    },
     "mini.nvim": {
       "rev": "174eb9b9d5d66254966b9d52ea51b996317e51f6",
       "src": "https://github.com/echasnovski/mini.nvim"
@@ -32,6 +36,10 @@
     "modicator.nvim": {
       "rev": "7f867b4980946f115f4ccb922637d70d89a59cb4",
       "src": "https://github.com/mawkler/modicator.nvim"
+    },
+    "nui.nvim": {
+      "rev": "10fc361835c856ba4233ef5ea135b919bf3dce97",
+      "src": "https://github.com/MunifTanjim/nui.nvim"
     },
     "nvim-hlslens": {
       "rev": "be2d7b2be01860b5445a007ff2bc72b29896db6b",

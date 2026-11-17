@@ -282,3 +282,10 @@ require("gitsigns").setup({
 		end, "[G]it: toggle diff base (current change / [T]runk)")
 	end,
 })
+
+-- jj's diff editor. `jj split`, `jj squash -i`, `jj commit -i`, `jj restore -i`
+-- ... open Neovim with a file tree and a side-by-side diff; pick what belongs
+-- in the change, then accept. Wired up through `ui.diff-editor` in
+-- ~/.config/jj/config.toml. Inside it: `a` toggles a file or line, `A` a hunk,
+-- <Tab> switches sides, <leader><CR> accepts, q aborts, g? lists the keys.
+require("hunk").setup()

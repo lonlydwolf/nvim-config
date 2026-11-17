@@ -92,6 +92,17 @@ local startup_cwd = vim.fn.getcwd()
 local session_file = session_dir .. vim.fn.sha256(startup_cwd) .. ".vim"
 local session_enabled = vim.fn.argc(-1) == 0
 
+-- jj's diff editor starts Neovim as `nvim -c "HunkDiffEditor ..."` (hunk.nvim):
+-- no file arguments, but restoring a project session over it would wreck the
+-- diff, and saving would replace the project's session with the diff layout.
+if
+	vim.iter(vim.v.argv):any(function(arg)
+		return arg:match("DiffEditor ") ~= nil or arg:match("HunkDiffView ") ~= nil
+	end)
+then
+	session_enabled = false
+end
+
 -- Attempt directory creation inside pcall; disable auto-session on failure
 local ok_mkdir, mkdir_err = pcall(vim.fn.mkdir, session_dir, "p")
 if not ok_mkdir then
