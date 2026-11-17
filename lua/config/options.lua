@@ -67,6 +67,11 @@ if vim.g.clipboard == nil and not has_clipboard_tool() then
 		copy = { ["+"] = copy("+"), ["*"] = copy("*") },
 		paste = { ["+"] = paste, ["*"] = paste },
 	}
+	-- The detection above loaded Neovim's clipboard provider, which, finding no
+	-- tool, recorded the clipboard as unavailable for the session. Reload it
+	-- (the way its own header describes) so it takes up g:clipboard.
+	vim.g.loaded_clipboard_provider = nil
+	vim.cmd.runtime("autoload/provider/clipboard.vim")
 end
 opt.confirm = true -- Enable prompt to save changes
 
