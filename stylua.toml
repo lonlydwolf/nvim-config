@@ -1,0 +1,5 @@
+# StyLua's defaults, written out. The file's presence also marks this repo
+# as "configures stylua", which is what enables format-on-save (format.lua).
+column_width = 120
+indent_type = "Tabs"
+indent_width = 4

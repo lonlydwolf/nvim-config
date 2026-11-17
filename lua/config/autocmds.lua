@@ -44,6 +44,84 @@ vim.api.nvim_create_autocmd("FileType", {
 	end,
 })
 
+-- Files changed outside Neovim (an agent, jj, a formatter in a terminal).
+-- 'autoread' reloads unmodified buffers, but only when something makes Neovim
+-- look. Focus changes do that already; also look when switching buffers,
+-- leaving a terminal, or pausing, so edits made while Neovim stays focused
+-- show up too.
+vim.api.nvim_create_autocmd({ "BufEnter", "TermLeave", "CursorHold" }, {
+	group = augroup,
+	desc = "Notice files changed on disk",
+	callback = function()
+		-- :checktime is not allowed in the command-line window.
+		if vim.fn.getcmdwintype() == "" then
+			vim.cmd("silent! checktime")
+		end
+	end,
+})
+
+-- Say what happened to each buffer whose file changed outside Neovim, so
+-- external edits are never silent. Batched: an agent often touches several
+-- open files at once. A reload is recognised by the BufReadPost it fires just
+-- before FileChangedShellPost, not guessed from the buffer state: a buffer
+-- also stays as it was when the W11/W12 prompt is answered with OK.
+local function no_changes()
+	return { reloaded = {}, kept = {}, unchanged = {}, deleted = {} }
+end
+local external = no_changes()
+local external_messages = {
+	{ "reloaded", "Reloaded from disk: %s", vim.log.levels.INFO },
+	{ "kept", "Changed on disk, your unsaved edits kept (:e! loads the disk version): %s", vim.log.levels.WARN },
+	{ "unchanged", "Changed on disk, not reloaded (:e loads it): %s", vim.log.levels.WARN },
+	{ "deleted", "Deleted on disk: %s", vim.log.levels.WARN },
+}
+
+-- Buffers read during the current check. Cleared on the next event-loop turn,
+-- so opening a file normally never counts as a later reload.
+local just_read = {}
+vim.api.nvim_create_autocmd("BufReadPost", {
+	group = augroup,
+	desc = "Note buffer reads for the external-change report",
+	callback = function(ev)
+		just_read[ev.buf] = true
+		vim.schedule(function()
+			just_read[ev.buf] = nil
+		end)
+	end,
+})
+
+vim.api.nvim_create_autocmd("FileChangedShellPost", {
+	group = augroup,
+	desc = "Report buffers changed outside Neovim",
+	callback = function(ev)
+		local pending = false
+		for _, names in pairs(external) do
+			pending = pending or #names > 0
+		end
+		local path = vim.api.nvim_buf_get_name(ev.buf)
+		local kind
+		if not vim.uv.fs_stat(path) then
+			kind = "deleted"
+		elseif just_read[ev.buf] then
+			kind = "reloaded"
+		else
+			kind = vim.bo[ev.buf].modified and "kept" or "unchanged"
+		end
+		table.insert(external[kind], vim.fn.fnamemodify(path, ":~:."))
+		if not pending then
+			vim.defer_fn(function()
+				for _, message in ipairs(external_messages) do
+					local names = external[message[1]]
+					if #names > 0 then
+						vim.notify(message[2]:format(table.concat(names, ", ")), message[3])
+					end
+				end
+				external = no_changes()
+			end, 150)
+		end
+	end,
+})
+
 -- ============================================================
 -- SESSION AUTO-SAVE / RESTORE
 -- ============================================================
@@ -51,12 +129,26 @@ vim.api.nvim_create_autocmd("FileType", {
 vim.opt.sessionoptions:remove("terminal")
 
 local session_dir = vim.fn.stdpath("state") .. "/sessions/"
+-- Session paths are literal: without this, a % or # in the state directory
+-- (XDG_STATE_HOME) would be expanded like a file name typed on the cmdline.
+local literal_path = { file = false }
 
 -- Capture startup identity once: changing directories or argument lists later
 -- will not alter this session's identity or eligibility.
 local startup_cwd = vim.fn.getcwd()
 local session_file = session_dir .. vim.fn.sha256(startup_cwd) .. ".vim"
 local session_enabled = vim.fn.argc(-1) == 0
+
+-- jj's diff editor starts Neovim as `nvim -c "HunkDiffEditor ..."` (hunk.nvim):
+-- no file arguments, but restoring a project session over it would wreck the
+-- diff, and saving would replace the project's session with the diff layout.
+if
+	vim.iter(vim.v.argv):any(function(arg)
+		return arg:match("DiffEditor ") ~= nil or arg:match("HunkDiffView ") ~= nil
+	end)
+then
+	session_enabled = false
+end
 
 -- Attempt directory creation inside pcall; disable auto-session on failure
 local ok_mkdir, mkdir_err = pcall(vim.fn.mkdir, session_dir, "p")
@@ -96,7 +188,7 @@ vim.api.nvim_create_autocmd("VimEnter", {
 		end
 
 		if vim.fn.filereadable(session_file) == 1 then
-			local ok, err = pcall(vim.cmd, "source " .. vim.fn.fnameescape(session_file))
+			local ok, err = pcall(vim.cmd.source, { args = { session_file }, magic = literal_path })
 			if not ok then
 				-- Prevent broken partial state from overwriting session on exit
 				session_enabled = false
@@ -123,7 +215,8 @@ vim.api.nvim_create_autocmd("VimLeavePre", {
 
 		-- session_file is keyed to startup_cwd, so no `cd` is needed here; a global
 		-- :cd would clear window/tab-local directories before they're recorded.
-		local ok_save, save_err = pcall(vim.cmd, "mksession! " .. vim.fn.fnameescape(session_file))
+		local ok_save, save_err =
+			pcall(vim.cmd.mksession, { args = { session_file }, bang = true, magic = literal_path })
 		if not ok_save then
 			vim.notify("Failed to save session: " .. tostring(save_err), vim.log.levels.WARN)
 		end

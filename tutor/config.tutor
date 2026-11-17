@@ -1,0 +1,615 @@
+# The tutor for this Neovim config
+
+This is a guided tour of *your* setup: the keys, pickers and workflows this
+config adds on top of plain Neovim. For Vim itself, see
+[the stock tutor](@tutor:vim-01-beginner).
+
+How to use it:
+
+- This buffer is a scratch copy. Edit it freely, nothing here is ever saved.
+- A line inside a command block can be run from here: put the cursor on it
+  and press `>>`{normal}.
+- `<CR>`{normal} on a link opens it, e.g. [the quickfix help](quickfix).
+- A ✗ in the sign column marks an exercise line. It becomes ✓ when the line
+  is right.
+- Leader is `<Space>`{normal}. Press it and wait: which-key lists every key
+  that can follow. That popup is the index of everything taught here.
+
+Lessons (press `<CR>`{normal} on one to jump there):
+
+ 0. [Set up the sandbox](*setup*)
+ 1. [Editing primitives](*editing*)              surround, text objects
+ 2. [Moving around](*moving*)                   windows, buffers, files
+ 3. [Finding things](*finding*)                  pickers
+ 4. [Editing by structure](*structure*)            treesitter
+ 5. [The language server](*server*)             navigate, rename, complete
+ 6. [Diagnostics](*diagnostics*)                     read, jump, fix
+ 7. [Copying context](*copying*)                 the Space-y family
+ 8. [Quickfix](*quickfix*)                        one list for everything
+ 9. [Tests and builds](*tests*)                failures you can jump to
+10. [Formatting and linting](*formatting*)          what runs on save, and when
+11. [jj and reviewing changes](*changes*)        hunks, agent review, split
+12. [The terminal](*terminal*)
+13. [Messages, sessions, toggles](*messages*)
+14. [Daily drill and cheat sheet](*drill*)
+
+Do one or two lessons a day and repeat the daily drill (lesson 14). Keys
+become muscle memory through repetition, not through reading.
+
+# Lesson 0: SET UP THE SANDBOX *setup*
+
+Most lessons are practised in a throwaway project with real language
+servers, a failing test and a jj repository. Create it and open it in a
+second tab by pressing `>>`{normal} on the next line:
+
+~~~ cmd
+TutorSandbox
+~~~
+
+- `gt`{normal} and `gT`{normal} switch between this tutor and the sandbox tab.
+- The sandbox tab has its own working directory, so pickers, tests and jj
+  all act on the sandbox, never on a real project.
+- Broke something? `:TutorSandbox!`{vim} throws it away and starts clean.
+
+Come back here with `gT`{normal} now.
+
+# Lesson 1: EDITING PRIMITIVES *editing*
+
+Practise these right here. Each line shows ✗ until it matches the goal.
+
+## Surround: `sa`{normal} add, `sd`{normal} delete, `sr`{normal} replace
+
+ 1. Put the cursor on the word editor and type `saiw"`{normal}
+    (surround-add, inner word, with a double quote).
+
+Wrap the word editor in double quotes.
+
+ 2. Put the cursor inside the parentheses and type `sd)`{normal}.
+
+Take the (parentheses) away from this line.
+
+ 3. Put the cursor inside the quotes and type `sr"'`{normal}
+    (surround-replace: from double quote to single quote).
+
+Turn "double quotes" into single quotes.
+
+ 4. Select `a + b` with `v`{normal}, then type `saf`{normal}, enter the
+    name wrap and press `<CR>`{normal}. The `f` surrounding is a function
+    call.
+
+Call wrap on this expression: a + b
+
+## Text objects: `i`{normal} inside, `a`{normal} around
+
+mini.ai adds `q` for any quote and `b` for any bracket, and it searches
+forward, so the cursor only has to be on the line, before the target.
+
+ 5. From the start of the line type `ciq`{normal}, then new text, then
+    `<Esc>`{normal}. Goal: translate("new text")
+
+greeting = translate("old text here")
+
+ 6. From the start of the line type `dib`{normal}. Goal: values = []
+
+values = [first, second, third]
+
+More of the same family, try them on the lines above:
+
+- `ci(`{normal} `da"`{normal} `yi{`{normal}    the usual objects, now multi-line aware
+- `ciNq`{normal} `ciLq`{normal}          the *next* / *last* quote, skipping the current
+- `g[`{normal} `g]`{normal}              jump to the left / right edge of an object
+- `vii`{normal} `vai`{normal}            the current indent scope (the guide line)
+- `[i`{normal} `]i`{normal}              jump to the top / bottom of that scope
+
+## Small things worth knowing
+
+- Brackets and quotes close themselves as you type (mini.pairs).
+- `gcc`{normal} comments a line, `gc`{normal} plus a motion a region, e.g.
+  `gcip`{normal}.
+- `[<Space>`{normal} and `]<Space>`{normal} add a blank line above / below.
+- In visual mode `p`{normal} pastes over the selection *without* replacing
+  what you yanked, so you can paste the same thing repeatedly.
+- `<Esc>`{normal} clears search highlighting.
+- `n`{normal} `N`{normal} `<C-d>`{normal} `<C-u>`{normal} keep the cursor
+  line centred.
+
+# Lesson 2: MOVING AROUND *moving*
+
+## Windows and tmux panes
+
+`<C-h>`{normal} `<C-j>`{normal} `<C-k>`{normal} `<C-l>`{normal} move between
+Neovim windows and continue into the neighbouring tmux pane at the edge. The
+same keys work everywhere, including the file explorer.
+
+ 1. In the sandbox tab type `:vsplit`{vim}, then move left and right with
+    `<C-h>`{normal} and `<C-l>`{normal}. Close one with `:q`{vim}.
+ 2. `<C-Up>`{normal} `<C-Down>`{normal} `<C-Left>`{normal}
+    `<C-Right>`{normal} resize the current window.
+
+## Buffers
+
+ 3. Open two files in the sandbox, then switch with `]b`{normal} and
+    `[b`{normal}. `3]b`{normal} skips three. `[B`{normal} and `]B`{normal}
+    go to the first and last.
+ 4. `<Space><Space>`{normal} lists open buffers in a picker.
+ 5. `<Space>bd`{normal} closes a buffer but keeps its window.
+
+## Files: oil
+
+ 6. Press `-`{normal} in any file: its directory opens *as a buffer*.
+    `<CR>`{normal} opens an entry, `-`{normal} goes up again.
+ 7. The listing is editable text. In the sandbox: go to a file name, change
+    it with `cw`{normal}, then `:w`{vim}. Oil shows what it is about to do;
+    confirm with `y`{normal} and the file is renamed. `dd`{normal} plus
+    `:w`{vim} deletes, `o`{normal} plus a name plus `:w`{vim} creates.
+    Rename it back when you are done.
+ 8. Inside oil: `<C-s>`{normal} opens in a vertical split, `<C-x>`{normal}
+    in a horizontal one, `<C-p>`{normal} previews, `g.`{normal} shows hidden
+    files, `gR`{normal} refreshes, `g?`{normal} lists all keys.
+
+## Getting back
+
+- `<C-o>`{normal} and `<C-i>`{normal} walk the jump list backward and
+  forward. `<Space>sj`{normal} shows it in a picker.
+- Reopening a file puts the cursor where you left it.
+
+# Lesson 3: FINDING THINGS *finding*
+
+Everything under `<Space>s`{normal} is a search. Do these in the sandbox tab.
+
+ 1. `<Space>sf`{normal} finds files. Type inv and press `<CR>`{normal}.
+ 2. `<Space>sg`{normal} greps as you type. Search for Total.
+ 3. Put the cursor on a word and press `<Space>sw`{normal}: grep for that
+    word. In visual mode it greps for the selection.
+ 4. `<Space>/`{normal} fuzzy-searches the lines of the current buffer.
+ 5. `<Space>sr`{normal} reopens the last picker exactly where you left it.
+    This is the one to build a habit around.
+ 6. `<Space>s.`{normal} recent files, `<Space>sn`{normal} this config's
+    files, `<Space>sh`{normal} help, `<Space>sk`{normal} keymaps.
+ 7. `<Space>sS`{normal} lists every picker there is. Worth browsing once.
+
+## Keys inside every picker
+
+| Key         | Does                                               |
+|-------------|----------------------------------------------------|
+| <Tab>       | select several entries                             |
+| alt-a       | select / deselect all                              |
+| alt-q       | send the selection to the quickfix list            |
+| ctrl-s      | open in a split (ctrl-v vertical, ctrl-t tab)      |
+| ctrl-g      | in grep: switch between live grep and fuzzy refine |
+| alt-i alt-h | include ignored / hidden files                     |
+| F4          | toggle the preview (shift-down / up scroll it)     |
+| F1          | show all keys of this picker                       |
+
+ 8. Run `<Space>sg`{normal}, type quantity, press `alt-a`{normal} then
+    `alt-q`{normal}. The matches are now in the quickfix list. Step through
+    them with `]q`{normal} and `[q`{normal}. More on that in
+    lesson 8.
+
+Also: `z=`{normal} on a misspelled word (with `<Space>ts`{normal} on) offers
+spelling suggestions in a picker.
+
+# Lesson 4: EDITING BY STRUCTURE *structure*
+
+Treesitter knows the syntax tree, so you can select and move by function,
+class and parameter instead of by character. Use `orders.py` in the sandbox.
+
+## Grow and shrink a selection
+
+ 1. Put the cursor on `percent` inside `apply_discount`. Press `v`{normal},
+    then `an`{normal} several times. The selection grows: name, expression,
+    statement, function, class. `in`{normal} shrinks it again.
+    This is the fastest way to select "the thing I am in".
+
+## Functions, classes, parameters
+
+| Object | Is        | Try         |
+|--------|-----------|-------------|
+| af if  | function  | vaf dif yaf |
+| ac ic  | class     | vac         |
+| aa ia  | parameter | cia daa     |
+
+ 2. Inside `summary`, type `vif`{normal}: the body. `<Esc>`{normal}, then
+    `vaf`{normal}: the whole method.
+ 3. On the parameter `minimum` type `daa`{normal}: gone, comma included.
+    Undo with `u`{normal}.
+
+## Move by function and class
+
+ 4. `]m`{normal} and `[m`{normal} jump to the next / previous function
+    start. `]M`{normal} `[M`{normal} to function ends.
+ 5. `]]`{normal} and `[[`{normal} jump between classes.
+
+## Swap parameters
+
+ 6. On `percent` in the `apply_discount` signature press `<Space>a`{normal}:
+    it trades places with the next parameter. `<Space>A`{normal} swaps it
+    back.
+
+## Know where you are
+
+ 7. Make the window short with `:split`{vim}, put the cursor in `summary`
+    and scroll with `<C-e>`{normal} until the method's first line leaves the
+    screen. The class and method lines stay pinned at the top (sticky
+    context). `[c`{normal} jumps to that line, `<Space>tc`{normal} turns the
+    feature off and on. Close the split with `:q`{vim}.
+ 8. Folds follow the syntax tree: `za`{normal} toggles the fold under the
+    cursor, `zM`{normal} closes all, `zR`{normal} opens all.
+
+# Lesson 5: THE LANGUAGE SERVER *server*
+
+Stay in `orders.py`. The `gr` family is Neovim's own LSP prefix.
+
+| Key | Does                                   |
+|-----|----------------------------------------|
+| K   | hover docs (press again to enter them) |
+| gd  | definition                             |
+| gD  | declaration                            |
+| grr | references                             |
+| gri | implementation                         |
+| grt | type definition                        |
+| grn | rename                                 |
+| gra | code actions, with a diff preview      |
+| gO  | outline of this file                   |
+
+ 1. On `Item(` in `main` press `gd`{normal}. You land on the class.
+    `<C-o>`{normal} takes you back.
+ 2. On `total` (the method in `Item`) press `grr`{normal}: every use, in a
+    picker with preview.
+ 3. On `subtotal` press `grn`{normal}, change the name, `<CR>`{normal}. Every
+    reference is renamed. Undo with `u`{normal}, or keep it.
+ 4. `gO`{normal} shows the file's outline. `<Space>ss`{normal} searches
+    symbols across the whole workspace as you type.
+ 5. `K`{normal} on `dataclass` shows its documentation in a bordered float.
+ 6. `<Space>th`{normal} toggles inlay hints (inferred types shown inline).
+
+## Completion
+
+ 7. At the end of `main` start a new line and type `order.`: the menu opens.
+    - `<C-n>`{normal} `<C-p>`{normal} move through it.
+    - `<C-y>`{normal} accepts. `<CR>`{normal} never accepts, it is always a
+      plain newline.
+    - `<C-Space>`{normal} opens the menu or toggles the documentation.
+    - `<C-e>`{normal} dismisses it.
+    - After accepting a snippet, `<Tab>`{normal} and `<S-Tab>`{normal} jump
+      between its placeholders.
+    - Inside a call's parentheses the signature appears by itself.
+
+If a server misbehaves: `<Space>lr`{normal} restarts it, `<Space>cl`{normal}
+shows its health report.
+
+# Lesson 6: DIAGNOSTICS *diagnostics*
+
+`orders.py` has problems on purpose: two unused imports and two typos.
+Signs in the gutter mark the lines: E is an error, W a warning.
+
+## Read
+
+ 1. Move onto the line with `lable`. The error expands *below* the line with
+    its full text. Warnings (try the `import os` line) appear at the end of
+    the line instead, so the code does not jump around.
+ 2. `<C-w>d`{normal} opens everything for this line in a float, with source
+    and code. Press it again to enter the float; `q`{normal} leaves.
+
+## Jump
+
+ 3. `]d`{normal} and `[d`{normal} go to the next / previous diagnostic and
+    centre it. `3]d`{normal} skips three. `]D`{normal} `[D`{normal} jump to
+    the last and first in the buffer.
+ 4. `<Space>sd`{normal} lists this buffer's diagnostics in a picker,
+    `<Space>sD`{normal} those of the workspace.
+
+## Fix
+
+ 5. On `import os` press `gra`{normal}: Ruff offers to remove the unused
+    import. Accept it. Then fix `lable` and `subtotl` by hand (or with
+    `grn`{normal} if you like to live dangerously).
+
+Each finding has one owner here: Ruff reports unused imports and variables
+(it can fix them), basedpyright reports undefined names and all type errors.
+
+# Lesson 7: COPYING CONTEXT *copying*
+
+When you ask a colleague or an agent for help, they need the location, the
+message and the code. The `<Space>y`{normal} family puts exactly that on the
+system clipboard. Undo your fixes from lesson 6 first (`u`{normal}), or run
+`:TutorSandbox!`{vim}, so there is something to copy.
+
+ 1. On the `lable` line press `<Space>yd`{normal}. Come back here
+    (`gT`{normal}) and paste below with `p`{normal}:
+
+
+
+    You get the path from the repository root, line, column, severity,
+    source and rule, the full message, a documentation link and the line of
+    code.
+ 2. Select a few lines with `V`{normal} and press `<Space>yd`{normal}: all
+    diagnostics inside the selection.
+ 3. `<Space>yD`{normal} copies every diagnostic in the buffer,
+    `<Space>yw`{normal} every one Neovim knows about.
+ 4. In the diagnostics picker (`<Space>sd`{normal}) mark entries with
+    `<Tab>`{normal} and press `ctrl-y`{normal}: the full text of those, and
+    the picker stays open.
+
+Not only diagnostics:
+
+| Key       | Copies                                                    |
+|-----------|-----------------------------------------------------------|
+| <Space>yp | the file's path                                           |
+| <Space>yl | path:line, or path:first-last for a selection             |
+| <Space>yc | the code as a fenced block with its location and problems |
+
+ 5. Select the `format_price` function with `vaf`{normal}, press
+    `<Space>yc`{normal} and paste here:
+
+
+
+Use `<Space>yl`{normal} when the reader can open the file (an agent in the
+same repo), `<Space>yc`{normal} when they cannot (a chat, an issue).
+
+# Lesson 8: QUICKFIX *quickfix*
+
+The quickfix list is one list of locations you step through. Greps,
+diagnostics, changed hunks and test failures all land in it, and the same
+two keys walk all of them: `]q`{normal} next, `[q`{normal} previous
+(`[Q`{normal} `]Q`{normal} first and last).
+
+ 1. `<Space>qd`{normal} loads every diagnostic into the list.
+    `<Space>qe`{normal} only the errors. Step through with `]q`{normal}.
+ 2. `<Space>qq`{normal} hides and shows the list window.
+ 3. Narrow it: `:Cfilter /imported/`{vim} keeps the entries whose text
+    matches, `:Cfilter! /imported/`{vim} drops them instead.
+ 4. `:colder`{vim} and `:cnewer`{vim} go back and forth between the lists you
+    have made. Nothing is lost when a new one arrives.
+ 5. `:grep quantity`{vim} fills the list from ripgrep without a picker.
+ 6. Change every hit at once: `:cdo s/quantity/count/ | update`{vim}.
+    It edits and saves each file in the list; `:TutorSandbox!`{vim} resets
+    the sandbox afterwards.
+ 7. `<Space>sq`{normal} fuzzy-searches the list itself.
+
+`<Space>qw`{normal} asks the language servers to check the whole workspace,
+not just open files. Not every server supports it; results arrive in the
+background and `<Space>qd`{normal} shows them.
+
+# Lesson 9: TESTS AND BUILDS *tests*
+
+Tests run in the background and failures become quickfix entries.
+
+ 1. Open `inventory.go` in the sandbox and press `<Space>qt`{normal}
+    (or `:Test`{vim}). You keep editing while it runs.
+ 2. It fails: the list opens without taking focus. `]q`{normal} jumps to the
+    failing assertion in `inventory_test.go`.
+ 3. Fix the bug in `Total` (it adds one too many), save, and press
+    `<Space>qt`{normal} again. A toast says passed. The list window opens
+    only on failure, but one that is already open stays: it now shows the
+    passing output, and `<Space>qq`{normal} closes it.
+ 4. Arguments are passed on: `:Test -run TestRemove`{vim}.
+ 5. From any other buffer (the quickfix window, a README) `:Test`{vim}
+    repeats the last run.
+
+What runs per language:
+
+| Filetype | Command                                                          |
+|----------|------------------------------------------------------------------|
+| go       | go test -json ./...                                              |
+| rust     | cargo test                                                       |
+| python   | pytest --tb=short -q (pytest must be on PATH: activate the venv) |
+
+To use a task runner instead, set `vim.g.test_cmd = "just test"`, for one
+project in its `.nvim.lua`.
+
+Builds work the same way through Vim's compilers:
+
+ 6. `:compiler go`{vim} then `<Space>qm`{normal} (or `:Make`{vim}) runs the
+    build in the background. `:compiler cargo`{vim} then `:Make check`{vim}
+    in a Rust project. `:MakeStop`{vim} cancels a run.
+
+# Lesson 10: FORMATTING AND LINTING *formatting*
+
+The rule: saving formats a file *only if the project configures the
+formatter*. Opening someone else's repository never restyles their code.
+`<Space>f`{normal} always formats, config or not.
+
+ 1. In `orders.py` look at the `totals = {...}` line in `main`: badly
+    spaced. Save with `:w`{vim}. Nothing changes, because the sandbox has no
+    Ruff config.
+ 2. Press `<Space>f`{normal}: formatted. Undo with `u`{normal}.
+ 3. Now make the project "configure" Ruff: `:e ruff.toml`{vim}, `:w`{vim},
+    go back to `orders.py` and save. This time it formats.
+
+What counts as configured:
+
+| Tool               | Marker                                                     |
+|--------------------|------------------------------------------------------------|
+| stylua             | stylua.toml                                                |
+| ruff               | ruff.toml, or [tool.ruff] in pyproject.toml                |
+| biome / prettier   | their config file; JS and TS use whichever the project has |
+| clang-format       | .clang-format                                              |
+| rustfmt, goimports | Cargo.toml, go.mod                                         |
+| shfmt, taplo       | .editorconfig, taplo.toml                                  |
+
+ 4. `<Space>tf`{normal} turns format-on-save off for this buffer,
+    `<Space>tF`{normal} everywhere. The statusline shows `fmt off` while it
+    is off. Toggle it back.
+ 5. `<Space>cf`{normal} shows which formatters apply to this buffer and
+    why, `<Space>cL`{normal} which linters.
+
+Linters (yamllint, hadolint, clang-tidy) run on save and report through the
+same diagnostics as the language servers, so lessons 6 to 8 apply to them.
+
+# Lesson 11: JJ AND REVIEWING CHANGES *changes*
+
+The sandbox is a jj repository. The gutter shows the *current jj change*:
+everything you edited since the baseline. The statusline shows the change id
+and the nearest bookmark instead of a git hash.
+
+## Hunks
+
+ 1. In `orders.py`, `]h`{normal} and `[h`{normal} jump between changed
+    hunks.
+ 2. `<Space>gp`{normal} previews what the hunk replaced.
+ 3. `<Space>gr`{normal} resets the hunk: your edit is gone, the file is as
+    it was. In visual mode it resets only the selected lines.
+ 4. `ih` is the hunk as a text object: `vih`{normal} selects it,
+    `yih`{normal} yanks it.
+ 5. `<Space>gb`{normal} toggles blame for the current line,
+    `<Space>gd`{normal} opens a side-by-side diff of the file.
+ 6. `<Space>qh`{normal} puts every changed hunk of the repository in the
+    quickfix list. `<Space>gS`{normal} lists changed files in a picker.
+
+## Reviewing an agent's work
+
+This is the loop to make a habit of:
+
+ 7. Before handing work to an agent, run `jj new` in a shell. The gutter is
+    now empty.
+ 8. When the agent is done, a toast tells you which open buffers were
+    reloaded. Everything in the gutter is the agent's work, nothing else.
+ 9. `<Space>qh`{normal}, then `]q`{normal} through every hunk.
+    `<Space>gp`{normal} to see the before, `<Space>gr`{normal} to reject one.
+
+Try it: in the sandbox tab run `:!jj new`{vim} (run from that tab, it acts
+on the sandbox), then edit a line and watch only that edit appear.
+
+`<Space>gt`{normal} widens the gutter from the current change to everything
+since trunk, to review a whole stack; the statusline shows `base: trunk`.
+It needs a repository with a remote, so try it in a real project.
+
+## Splitting a change
+
+jj's interactive commands open Neovim (hunk.nvim) as the diff editor.
+
+10. In a shell (a tmux pane), `cd` into the sandbox, whose path `:pwd`{vim}
+    prints in the sandbox tab, and run `jj split`. A file tree and a
+    side-by-side diff appear.
+
+| Key         | Does                                  |
+|-------------|---------------------------------------|
+| a           | toggle the file (tree) or line (diff) |
+| A           | toggle the hunk under the cursor      |
+| <Tab>       | switch between the two sides          |
+| <CR>        | open the file from the tree           |
+| <Space><CR> | accept the selection                  |
+| q           | abort, nothing changes                |
+| g?          | all keys                              |
+
+    The same editor serves `jj squash -i`, `jj commit -i` and
+    `jj restore -i`.
+
+In plain git repositories `<Space>gs`{normal} stages a hunk. Under jj there
+is nothing to stage, so the key is not mapped there.
+
+# Lesson 12: THE TERMINAL *terminal*
+
+ 1. `<M-t>`{normal} (Option-t) opens a floating terminal. The same key hides
+    it again, from inside the shell too. The shell keeps running.
+ 2. `<Esc>`{normal} goes straight to the program in the terminal, with no
+    delay, so TUIs behave normally.
+ 3. `<M-n>`{normal} leaves terminal mode: now the output is a normal buffer.
+    Scroll, search with `/`{normal}, yank. `i`{normal} returns to the shell.
+ 4. Put the cursor on a `file:line` in compiler or test output and press
+    `gF`{normal}: that file opens at that line, inside the floating window.
+    `<M-t>`{normal} hides the float; the file stays open as a buffer, one
+    `<Space><Space>`{normal} away.
+
+Try it: `<M-t>`{normal}, run
+`rg -Hn --no-heading Total ~/.cache/nvim/tutor-sandbox/inventory.go`, press
+`<M-n>`{normal}, move onto a result and press `gF`{normal}.
+
+`<Space>tt`{normal} also toggles the terminal, from normal mode only.
+
+# Lesson 13: MESSAGES, SESSIONS, TOGGLES *messages*
+
+## Messages and notifications
+
+ 1. Run `:map`{vim}. The long output does not stop at "Press ENTER": it
+    collapses to a `[+N]` marker. `g<`{normal} opens all of it in a pager
+    you can search and yank from.
+ 2. `<Space>n`{normal} opens the history of every toast shown this session.
+    Errors stay on screen for ten seconds, and this is where to reread them.
+ 3. `:messages`{vim} still holds classic messages and startup errors.
+
+## Sessions
+
+- Starting `nvim` with no arguments restores the session for that
+  directory: buffers, windows, tabs. Quitting saves it. With a file
+  argument, neither happens.
+- `<Space>S`{normal} saves a manual session, `:SessionLoad`{vim} restores it.
+- `:restart`{vim} restarts Neovim and the session comes back. Use it after
+  changing the config.
+
+## Toggles: everything under `<Space>t`{normal}
+
+| Key       | Toggles                     |
+|-----------|-----------------------------|
+| <Space>ts | spell check                 |
+| <Space>tw | whitespace glyphs           |
+| <Space>tW | line wrap                   |
+| <Space>th | inlay hints                 |
+| <Space>tc | sticky context              |
+| <Space>tf | format on save, this buffer |
+| <Space>tF | format on save, everywhere  |
+| <Space>tt | terminal                    |
+
+## Checks: everything under `<Space>c`{normal}
+
+`<Space>ch`{normal} health of everything, `<Space>cl`{normal} language
+servers, `<Space>cf`{normal} formatters, `<Space>cL`{normal} linters.
+
+## Built in, worth remembering
+
+- `:packadd nvim.undotree`{vim} then `:Undotree`{vim}: browse the undo
+  history as a tree. Undo history survives restarts here.
+- `"`{normal} and `'`{normal} in normal mode, `<C-r>`{normal} in insert
+  mode: which-key previews registers and marks before you choose.
+- `gx`{normal} opens the URL or path under the cursor.
+
+# Lesson 14: DAILY DRILL AND CHEAT SHEET *drill*
+
+Five minutes, once a day, in the sandbox (`:TutorSandbox!`{vim} first). Do
+each line without looking anything up; if you hesitate, that is the one to
+repeat tomorrow.
+
+ 1. Find `inventory.go` with `<Space>sf`{normal}, jump to `Total` with
+    `<Space>/`{normal}.
+ 2. Run the tests (`<Space>qt`{normal}), jump to the failure
+    (`]q`{normal}), fix it, run again.
+ 3. In `orders.py`: next error (`]d`{normal}), copy it
+    (`<Space>yd`{normal}), fix it.
+ 4. Rename `subtotal` (`grn`{normal}), find its references (`grr`{normal}).
+ 5. Select a method by structure (`vaf`{normal} or `v`{normal} plus
+    `an`{normal}), copy it with context (`<Space>yc`{normal}).
+ 6. Swap two parameters (`<Space>a`{normal}).
+ 7. Walk your changes (`]h`{normal}), preview one (`<Space>gp`{normal}),
+    reset one (`<Space>gr`{normal}).
+ 8. All changes to quickfix (`<Space>qh`{normal}), close the list
+    (`<Space>qq`{normal}).
+ 9. Terminal in and out (`<M-t>`{normal}), reopen the last picker
+    (`<Space>sr`{normal}).
+
+## Cheat sheet
+
+| Area        | Keys                                    |
+|-------------|-----------------------------------------|
+| Find        | <Space>sf sg sw / sr s. <Space><Space>  |
+| In pickers  | <Tab> alt-a alt-q ctrl-g ctrl-y F1      |
+| Files       | - (oil)  ]b [b  <Space>bd  <C-o> <C-i>  |
+| Windows     | <C-h> <C-j> <C-k> <C-l>                 |
+| Structure   | an in  af ac aa  ]m [m ]] [[  <Space>a  |
+| Edit        | sa sd sr  ciq dib  gcc                  |
+| LSP         | K gd grr gri grt grn gra gO <Space>ss   |
+| Diagnostics | ]d [d <C-w>d <Space>sd <Space>sD        |
+| Copy        | <Space>yd yD yw yp yl yc                |
+| Quickfix    | ]q [q <Space>qq qd qe qh qt qm :Cfilter |
+| Changes     | ]h [h ih <Space>gp gr gb gd gt gS       |
+| Format      | <Space>f <Space>tf <Space>tF <Space>cf  |
+| Terminal    | <M-t> <M-n> gF                          |
+| Messages    | g< <Space>n :messages                   |
+
+Forgot a key? Press `<Space>`{normal} and read. `<Space>sk`{normal} searches
+every keymap by its description.
+
+Changing this tutor: it lives in `tutor/config.tutor` in the config. The
+checked lines of lesson 1 are listed by line number in
+`tutor/config.tutor.json`, so adding or removing lines *above the end of
+lesson 1* means updating those numbers.

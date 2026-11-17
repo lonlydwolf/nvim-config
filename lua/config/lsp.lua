@@ -20,6 +20,7 @@ local servers = {
 	-- JavaScript / TypeScript
 	"vtsls",
 	"biome", -- lint diagnostics + quick fixes; only attaches where a Biome config exists
+	"eslint", -- same for ESLint projects; only attaches where an ESLint config exists
 
 	-- C / C++
 	"clangd",
@@ -58,18 +59,40 @@ vim.lsp.enable(servers)
 -- SERVER-SPECIFIC CONFIGURATION
 -- ============================================================
 
--- 1. Lua: Expose Neovim runtime library for auto-completion & docs on vim.*
+-- 1. Lua: LuaJIT and the Neovim runtime library (completion and docs on vim.*),
+-- but only where the Lua being edited is Neovim Lua: this config, installed
+-- plugins and the runtime itself. Any other Lua project keeps lua_ls defaults
+-- and its own .luarc.json, instead of being told `vim` exists.
+local function is_nvim_lua(root)
+	root = vim.uv.fs_realpath(root) or root
+	for _, dir in ipairs({ vim.fn.stdpath("config"), vim.fn.stdpath("data"), vim.env.VIMRUNTIME }) do
+		dir = vim.uv.fs_realpath(dir) or dir
+		if root == dir or vim.startswith(root, dir .. "/") then
+			return true
+		end
+	end
+	return false
+end
+
 vim.lsp.config("lua_ls", {
-	settings = {
-		Lua = {
-			diagnostics = {
-				globals = { "vim" },
+	on_init = function(client)
+		local folder = client.workspace_folders and client.workspace_folders[1]
+		if not (folder and is_nvim_lua(folder.name)) then
+			return
+		end
+		client.config.settings.Lua = vim.tbl_deep_extend("force", client.config.settings.Lua, {
+			runtime = {
+				version = "LuaJIT",
+				path = { "lua/?.lua", "lua/?/init.lua" },
 			},
 			workspace = {
 				checkThirdParty = false,
 				library = { vim.env.VIMRUNTIME },
 			},
-		},
+		})
+	end,
+	settings = {
+		Lua = {},
 	},
 })
 
@@ -143,21 +166,68 @@ vim.lsp.config("gopls", {
 	},
 })
 
--- 6. JSON & YAML: Schemastore integration
+-- 6. JSON & YAML: Schemastore integration. The catalogs are several thousand
+-- lines, so they are attached when a server starts (before_init) rather than
+-- stored in the static config, where they made `:checkhealth vim.lsp`
+-- unreadable and were built at every startup.
 vim.lsp.config("jsonls", {
+	before_init = function(_, config)
+		config.settings.json.schemas = require("schemastore").json.schemas()
+	end,
 	settings = {
 		json = {
-			schemas = require("schemastore").json.schemas(),
 			validate = { enable = true },
 		},
 	},
 })
 
 vim.lsp.config("yamlls", {
+	before_init = function(_, config)
+		config.settings.yaml.schemas = require("schemastore").yaml.schemas()
+	end,
 	settings = {
 		yaml = {
 			schemaStore = { enable = false, url = "" },
-			schemas = require("schemastore").yaml.schemas(),
+		},
+	},
+})
+
+-- 7. Python: one owner per finding. Ruff and basedpyright both report unused
+-- imports, unused variables and undefined names, so each showed up twice.
+--   Ruff         unused imports (F401) and variables (F841): it has the fixes.
+--   basedpyright undefined names: it is type-aware and stays on even when a
+--                project's Ruff config does not select the F rules.
+-- Project config still wins: pyrightconfig.json / [tool.basedpyright] override
+-- these severities, and the Ruff ignore is added to the project's own.
+--
+-- basedpyright runs in its default "recommended" mode. For fewer type warnings
+-- set `vim.g.basedpyright_type_checking_mode = "standard"` (here, or in a
+-- project's .nvim.lua), or typeCheckingMode in the project's own config.
+vim.lsp.config("basedpyright", {
+	before_init = function(_, config)
+		-- Read at server start, so a project-local .nvim.lua can set it.
+		local mode = vim.g.basedpyright_type_checking_mode
+		if mode then
+			config.settings.basedpyright.analysis.typeCheckingMode = mode
+		end
+	end,
+	settings = {
+		basedpyright = {
+			disableOrganizeImports = true, -- Ruff's "organize imports" code action owns this
+			analysis = {
+				diagnosticSeverityOverrides = {
+					reportUnusedImport = "none",
+					reportUnusedVariable = "none",
+				},
+			},
+		},
+	},
+})
+
+vim.lsp.config("ruff", {
+	init_options = {
+		settings = {
+			lint = { ignore = { "F821" } },
 		},
 	},
 })
@@ -166,9 +236,14 @@ vim.lsp.config("yamlls", {
 -- DIAGNOSTICS CONFIGURATION
 -- ============================================================
 
+-- Both only on the cursor line. Errors expand below it with the full message;
+-- warnings and hints stay at the end of the line, so moving over them no
+-- longer shifts the code up and down. <C-w>d opens the full float.
+local severity = vim.diagnostic.severity
 vim.diagnostic.config({
-	virtual_text = false,
-	virtual_lines = { current_line = true },
+	virtual_lines = { current_line = true, severity = severity.ERROR },
+	virtual_text = { current_line = true, severity = { max = severity.WARN }, source = "if_many" },
+	float = { source = true },
 	signs = true,
 	underline = true,
 	severity_sort = true,
@@ -208,11 +283,12 @@ vim.api.nvim_create_autocmd("LspAttach", {
 			vim.tbl_extend("force", opts, { desc = "[G]o to [I]mplementation" })
 		)
 
+		-- grt is the built-in key for type definition (same family as grr/gri).
 		vim.keymap.set(
 			"n",
-			"gy",
+			"grt",
 			fzf.lsp_typedefs,
-			vim.tbl_extend("force", opts, { desc = "[G]o to T[y]pe Definition" })
+			vim.tbl_extend("force", opts, { desc = "[G]o to [T]ype Definition" })
 		)
 
 		vim.keymap.set(
@@ -222,23 +298,8 @@ vim.api.nvim_create_autocmd("LspAttach", {
 			vim.tbl_extend("force", opts, { desc = "Document [O]utline (Symbols)" })
 		)
 
-		-- --------------------------------------------------------
-		-- Diagnostics (fzf-lua)
-		-- --------------------------------------------------------
-
-		vim.keymap.set(
-			"n",
-			"<leader>ld",
-			fzf.diagnostics_document,
-			vim.tbl_extend("force", opts, { desc = "[L]SP [D]iagnostics (Buffer)" })
-		)
-
-		vim.keymap.set(
-			"n",
-			"<leader>lD",
-			fzf.diagnostics_workspace,
-			vim.tbl_extend("force", opts, { desc = "[L]SP [D]iagnostics (Workspace)" })
-		)
+		-- Diagnostics pickers live on <leader>sd / <leader>sD (finder.lua): they
+		-- also list nvim-lint results, so they must not depend on an LSP attach.
 
 		-- --------------------------------------------------------
 		-- LSP Restart

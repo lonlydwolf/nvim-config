@@ -43,6 +43,10 @@ vim.pack.add({
 	-- directly rather than being routed through mini.ai.
 	{ src = "https://github.com/nvim-treesitter/nvim-treesitter-textobjects", version = "main" },
 
+	-- Sticky header: keeps the enclosing function/class line visible at the top
+	-- of the window while scrolling through long bodies.
+	{ src = "https://github.com/nvim-treesitter/nvim-treesitter-context" },
+
 	-- mini.nvim monorepo: Single clone providing 40+ lightweight modules
 	-- We will use: mini.ai, mini.surround, mini.pairs, mini.indentscope
 	--              mini.statusline, mini.notify, mini.icons, mini.bufremove
@@ -52,6 +56,12 @@ vim.pack.add({
 	-- Git gutter signs, hunk stage/preview -- reads .git directly, so it works
 	-- fine against a colocated jj/git backend
 	{ src = "https://github.com/lewis6991/gitsigns.nvim" },
+
+	-- jj's diff editor: pick hunks and lines for `jj split`, `jj squash -i`,
+	-- `jj commit -i` ... in Neovim (wired up in ~/.config/jj/config.toml).
+	-- nui.nvim is its UI dependency.
+	{ src = "https://github.com/MunifTanjim/nui.nvim" },
+	{ src = "https://github.com/julienvincent/hunk.nvim" },
 
 	-- Formatting + linting via CLI tools (not LSP servers)
 	{ src = "https://github.com/stevearc/conform.nvim" },

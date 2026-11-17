@@ -3,7 +3,21 @@
 -- ============================================================
 
 local fzf = require("fzf-lua")
-fzf.setup({})
+fzf.setup({
+	diagnostics = {
+		actions = {
+			-- Copy the selected diagnostics in full (Tab multi-selects, alt-a selects
+			-- all); the picker stays open. Same format as <leader>yd (yank.lua).
+			["ctrl-y"] = {
+				fn = function(selected, opts)
+					require("config.yank").picker_diagnostics(selected, opts)
+				end,
+				exec_silent = true,
+				desc = "copy-diagnostics",
+			},
+		},
+	},
+})
 fzf.register_ui_select()
 
 local map = vim.keymap.set
@@ -17,9 +31,10 @@ map("n", "<leader>sh", fzf.helptags, { desc = "[S]earch [H]elp" })
 map("n", "<leader>sk", fzf.keymaps, { desc = "[S]earch [K]eymaps" })
 map("n", "<leader>sd", fzf.diagnostics_document, { desc = "[S]earch [D]iagnostics (Buffer)" })
 map("n", "<leader>sD", fzf.diagnostics_workspace, { desc = "[S]earch [D]iagnostics (Workspace)" })
-map("n", "<leader>sl", fzf.lsp_references, { desc = "[S]earch [L]SP references" })
-map("n", "<leader>so", fzf.lsp_document_symbols, { desc = "[S]earch document [O]utline (Symbols)" })
-map("n", "<leader>ss", fzf.lsp_workspace_symbols, { desc = "[S]earch [S]ymbols workspace" })
+-- LSP references and the document outline are on grr / gO (lsp.lua).
+-- Live variant: re-queries the server as you type, instead of sending one
+-- empty query that large workspaces answer with a truncated list.
+map("n", "<leader>ss", fzf.lsp_live_workspace_symbols, { desc = "[S]earch [S]ymbols workspace" })
 map("n", "<leader>sr", fzf.resume, { desc = "[S]earch [R]esume last" })
 map("n", "<leader>s.", fzf.oldfiles, { desc = "[S]earch recent files" })
 map("n", "<leader>sq", fzf.quickfix, { desc = "[S]earch [Q]uickfix list" })

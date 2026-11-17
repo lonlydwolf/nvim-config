@@ -22,6 +22,9 @@ opt.fillchars = { eob = " " } -- Hide'~' characters on blank lines past end-of-f
 opt.pumheight = 10 -- popup menu height
 opt.pumblend = 10 -- popup menu transparency
 opt.winblend = 0 -- floating window transparency
+opt.winborder = "rounded" -- Default border for floats (hover, diagnostics); matches completion and terminal
+opt.showmode = false -- Mode is already shown by the statusline and the cursor line number
+opt.shortmess:append("S") -- Search count is already shown by hlslens and the statusline
 
 -- Editing
 opt.expandtab = true -- Use spaces insted of tab
@@ -31,6 +34,45 @@ opt.smartindent = true -- Smart autoindent
 opt.autoindent = true -- Copy indent from current line
 opt.wrap = false -- Do not wrap lines by default
 opt.clipboard:append("unnamedplus") -- Use system clipboard
+
+-- On a machine with no clipboard tool (headless Linux over SSH, outside tmux)
+-- the + register has no provider: Neovim's automatic OSC 52 fallback only
+-- applies while 'clipboard' is unset. Wire it up explicitly for that case.
+-- Copy goes to the local terminal through OSC 52. Paste returns what was last
+-- copied from this Neovim instead of querying the terminal: with unnamedplus
+-- every `p` would otherwise wait for an answer many terminals never send. Use
+-- the terminal's own paste for text copied elsewhere.
+-- "No clipboard tool" is Neovim's own answer, so every provider it supports
+-- counts (pbcopy, wl-copy, xclip, lemonade, win32yank, termux, tmux, ...).
+-- With 'clipboard' already set it never picks OSC 52 itself, so "" means none.
+local function has_clipboard_tool()
+	return vim.fn["provider#clipboard#Executable"]() ~= ""
+end
+
+if vim.g.clipboard == nil and not has_clipboard_tool() then
+	local osc52 = require("vim.ui.clipboard.osc52")
+	local last = { {}, "v" }
+	local function copy(reg)
+		local send = osc52.copy(reg)
+		return function(lines, regtype)
+			last = { lines, regtype }
+			send(lines)
+		end
+	end
+	local function paste()
+		return last
+	end
+	vim.g.clipboard = {
+		name = "OSC 52 (copy only)",
+		copy = { ["+"] = copy("+"), ["*"] = copy("*") },
+		paste = { ["+"] = paste, ["*"] = paste },
+	}
+	-- The detection above loaded Neovim's clipboard provider, which, finding no
+	-- tool, recorded the clipboard as unavailable for the session. Reload it
+	-- (the way its own header describes) so it takes up g:clipboard.
+	vim.g.loaded_clipboard_provider = nil
+	vim.cmd.runtime("autoload/provider/clipboard.vim")
+end
 opt.confirm = true -- Enable prompt to save changes
 
 -- Search
@@ -38,6 +80,9 @@ opt.ignorecase = true -- Case insensitive search
 opt.smartcase = true -- Case sensitive if uppercase in string
 opt.incsearch = true -- Show matches as typing
 opt.hlsearch = true -- Highlight search matches
+-- :grep fills the quickfix list. The default adds -uu, which also searches
+-- ignored and hidden files (.git, node_modules, build output).
+opt.grepprg = "rg --vimgrep --smart-case"
 
 -- Disk-backed, persistent undo history and crash recovery
 opt.undofile = true
@@ -53,7 +98,10 @@ opt.foldlevel = 99 -- Open all folds by default
 opt.foldlevelstart = 99 -- Ensure folds don't automatically close on file open
 
 -- Snappier/Better Diffs and Command Line
-opt.diffopt:append("linematch:60") -- Intelligently align lines inside diff hunks
+-- Intelligently align lines inside diff hunks. Replace the default
+-- linematch:40 rather than appending a second linematch entry.
+opt.diffopt:remove("linematch:40")
+opt.diffopt:append("linematch:60")
 opt.wildmode = "longest:full,full" -- Bash/Zsh-like command line tab completion
 
 -- Per Project Overrides
@@ -68,16 +116,20 @@ opt.listchars = { tab = "» ", trail = "." }
 
 -- Ensure mise-managed tools (LSPs, formatters, linters) are always found,
 -- even when nvim is launched from a GUI that never sourced .zshrc.
-local ok, obj = pcall(function()
-	-- Bounded: a hung mise must not hang startup (on timeout wait() kills it, code 124).
-	return vim.system({ "mise", "bin-paths" }, { text = true }):wait(2000)
-end)
+-- A shell with `mise activate` has already put the install dirs on PATH, so
+-- the (synchronous, ~27 ms) call is only made when they are missing.
+if not (vim.env.PATH or ""):find("/mise/installs/", 1, true) then
+	local ok, obj = pcall(function()
+		-- Bounded: a hung mise must not hang startup (on timeout wait() kills it, code 124).
+		return vim.system({ "mise", "bin-paths" }, { text = true }):wait(2000)
+	end)
 
-if ok and obj.code == 0 then
-	local stdout = vim.trim(obj.stdout)
+	if ok and obj.code == 0 then
+		local stdout = vim.trim(obj.stdout)
 
-	if stdout ~= "" then
-		local dirs = vim.split(stdout, "\n", { trimempty = true })
-		vim.env.PATH = table.concat(dirs, ":") .. ":" .. vim.env.PATH
+		if stdout ~= "" then
+			local dirs = vim.split(stdout, "\n", { trimempty = true })
+			vim.env.PATH = table.concat(dirs, ":") .. ":" .. vim.env.PATH
+		end
 	end
 end

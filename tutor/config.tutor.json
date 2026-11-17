@@ -1,0 +1,10 @@
+{
+  "expect": {
+    "65": "Wrap the word \"editor\" in double quotes.",
+    "69": "Take the parentheses away from this line.",
+    "74": "Turn 'double quotes' into single quotes.",
+    "80": "Call wrap on this expression: wrap(a + b)",
+    "90": "greeting = translate(\"new text\")",
+    "94": "values = []"
+  }
+}
