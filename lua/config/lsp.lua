@@ -20,6 +20,7 @@ local servers = {
 	-- JavaScript / TypeScript
 	"vtsls",
 	"biome", -- lint diagnostics + quick fixes; only attaches where a Biome config exists
+	"eslint", -- same for ESLint projects; only attaches where an ESLint config exists
 
 	-- C / C++
 	"clangd",
