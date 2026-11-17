@@ -147,7 +147,17 @@ end, { desc = "Swap previous parameter" })
 
 -- Text objects (brackets/quotes/custom -- not function/class/parameter,
 -- which nvim-treesitter-textobjects handles above)
-require("mini.ai").setup()
+-- mini.ai's default an/in/al/il deliberately override Neovim 0.12's built-in
+-- incremental selection (v_an grows by syntax node, v_in shrinks). Move the
+-- next/last variants to capitals, as mini.ai's own docs suggest, to get both.
+require("mini.ai").setup({
+	mappings = {
+		around_next = "aN",
+		inside_next = "iN",
+		around_last = "aL",
+		inside_last = "iL",
+	},
+})
 
 -- Add/replace/delete surrounding pairs: sa / sr / sd
 require("mini.surround").setup()
