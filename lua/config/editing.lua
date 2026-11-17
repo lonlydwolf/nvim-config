@@ -45,6 +45,13 @@ local ensure_installed = {
 	"vim",
 	"vimdoc",
 	"query",
+	-- Filetypes that already have an LSP/linter/formatter here, or show up in
+	-- everyday VCS and build work, but had no parser.
+	"dockerfile",
+	"gitcommit",
+	"diff",
+	"gomod",
+	"make",
 }
 local already_installed = require("nvim-treesitter.config").get_installed()
 local to_install = vim.iter(ensure_installed)
@@ -112,6 +119,13 @@ vim.keymap.set({ "x", "o" }, "ia", function()
 end, { desc = "Inside parameter" })
 
 -- Motion
+-- The runtime ftplugins for Python, Rust and Go define buffer-local, regex-based
+-- [[ ]] [m ]m maps that would shadow the treesitter motions below in exactly
+-- those languages. These globals turn those ftplugin maps off.
+vim.g.no_python_maps = 1
+vim.g.no_rust_maps = 1
+vim.g.no_go_maps = 1
+
 vim.keymap.set({ "n", "x", "o" }, "]m", function()
 	ts_move.goto_next_start("@function.outer", "textobjects")
 end, { desc = "Next function start" })
