@@ -104,7 +104,8 @@ vim.keymap.set("n", "<leader>tc", "<cmd>TSContext toggle<CR>", { desc = "[T]oggl
 -- Jump up to the line the context shows.
 vim.keymap.set("n", "[c", function()
 	if vim.wo.diff then
-		vim.cmd.normal({ "[c", bang = true }) -- keep the built-in "previous change" in diff mode
+		-- Keep the built-in "previous change" in diff mode, count included.
+		vim.cmd.normal({ vim.v.count1 .. "[c", bang = true })
 	else
 		require("treesitter-context").go_to_context(vim.v.count1)
 	end
