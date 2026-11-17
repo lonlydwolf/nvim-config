@@ -271,13 +271,12 @@ local function run(cmd, efm, transform)
 	local cwd = vim.fn.getcwd()
 	vim.notify("Running: " .. cmd)
 	local state = { cancelled = false }
-	running = state
 	-- `exec 2>&1` before the command: stderr of every part of a compound
 	-- command (a && b) joins stdout, so errors keep their order with the rest.
 	-- detach makes the shell a process group leader, so :MakeStop reaches all
 	-- of its children.
 	local argv = { "sh", "-c", "exec 2>&1\n" .. cmd }
-	state.job = vim.system(argv, { text = true, cwd = cwd, detach = true }, function(result)
+	local started, job = pcall(vim.system, argv, { text = true, cwd = cwd, detach = true }, function(result)
 		vim.schedule(function()
 			running = nil
 			local lines = vim.split(result.stdout or "", "\n", { trimempty = true })
@@ -302,20 +301,33 @@ local function run(cmd, efm, transform)
 				end
 			end
 			vim.fn.setqflist({}, "r", { title = cmd, items = items })
+			local where = locations == 1 and "1 location" or (locations .. " locations")
 			if state.cancelled then
 				vim.notify(cmd .. ": cancelled", vim.log.levels.WARN)
+			elseif result.signal ~= 0 then
+				-- Checked before the exit code: a command killed by a signal (a
+				-- crashing test binary, the OOM killer) reports code 0.
+				local message = ("%s: crashed (signal %d), %s in quickfix"):format(cmd, result.signal, where)
+				vim.notify(message, vim.log.levels.ERROR)
+				open_in_background()
 			elseif result.code == 0 then
 				vim.notify(cmd .. ": passed")
-			elseif result.signal ~= 0 then
-				vim.notify(("%s: killed by signal %d"):format(cmd, result.signal), vim.log.levels.WARN)
 			else
-				local where = locations == 1 and "1 location" or (locations .. " locations")
 				local message = ("%s: failed (exit %d), %s in quickfix"):format(cmd, result.code, where)
 				vim.notify(message, vim.log.levels.ERROR)
 				open_in_background()
 			end
 		end)
 	end)
+	-- Spawning throws when it cannot start at all (the directory was deleted,
+	-- no `sh`). Only a started run counts as running, so the next :Make or
+	-- :Test is not refused with "Still running".
+	if not started then
+		vim.notify(("Could not start %s: %s"):format(cmd, job), vim.log.levels.ERROR)
+		return
+	end
+	state.job = job
+	running = state
 end
 
 local last_test ---@type { cmd: string, efm: string, transform?: function }?
