@@ -44,6 +44,40 @@ vim.api.nvim_create_autocmd("FileType", {
 	end,
 })
 
+-- Files changed outside Neovim (an agent, jj, a formatter in a terminal).
+-- 'autoread' reloads unmodified buffers, but only when something makes Neovim
+-- look. Focus changes do that already; also look when switching buffers,
+-- leaving a terminal, or pausing, so edits made while Neovim stays focused
+-- show up too.
+vim.api.nvim_create_autocmd({ "BufEnter", "TermLeave", "CursorHold" }, {
+	group = augroup,
+	desc = "Notice files changed on disk",
+	callback = function()
+		-- :checktime is not allowed in the command-line window.
+		if vim.fn.getcmdwintype() == "" then
+			vim.cmd("silent! checktime")
+		end
+	end,
+})
+
+-- Say so when a buffer was reloaded, so external edits are never silent.
+-- Batched: an agent often touches several open files at once.
+local reloaded = {}
+vim.api.nvim_create_autocmd("FileChangedShellPost", {
+	group = augroup,
+	desc = "Report buffers reloaded after an external change",
+	callback = function(ev)
+		if #reloaded == 0 then
+			vim.defer_fn(function()
+				local names = table.concat(reloaded, ", ")
+				vim.notify(("Reloaded from disk: %s"):format(names))
+				reloaded = {}
+			end, 150)
+		end
+		reloaded[#reloaded + 1] = vim.fn.fnamemodify(ev.file, ":~:.")
+	end,
+})
+
 -- ============================================================
 -- SESSION AUTO-SAVE / RESTORE
 -- ============================================================
