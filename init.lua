@@ -20,6 +20,7 @@ local modules = {
 	"config.yank", -- <leader>y: copy diagnostics, file references, code with context
 	"config.quickfix", -- <leader>q: quickfix toggle, diagnostics/hunks to list, :Test and :Make
 	"config.autocmds", -- yank flash, session save/restore
+	"config.tutor", -- :TutorSandbox, the practice project for `:Tutor config`
 }
 
 local failed = {}
