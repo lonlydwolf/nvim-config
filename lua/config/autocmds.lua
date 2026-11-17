@@ -129,6 +129,9 @@ vim.api.nvim_create_autocmd("FileChangedShellPost", {
 vim.opt.sessionoptions:remove("terminal")
 
 local session_dir = vim.fn.stdpath("state") .. "/sessions/"
+-- Session paths are literal: without this, a % or # in the state directory
+-- (XDG_STATE_HOME) would be expanded like a file name typed on the cmdline.
+local literal_path = { file = false }
 
 -- Capture startup identity once: changing directories or argument lists later
 -- will not alter this session's identity or eligibility.
@@ -185,7 +188,7 @@ vim.api.nvim_create_autocmd("VimEnter", {
 		end
 
 		if vim.fn.filereadable(session_file) == 1 then
-			local ok, err = pcall(vim.cmd.source, { args = { session_file } })
+			local ok, err = pcall(vim.cmd.source, { args = { session_file }, magic = literal_path })
 			if not ok then
 				-- Prevent broken partial state from overwriting session on exit
 				session_enabled = false
@@ -212,7 +215,8 @@ vim.api.nvim_create_autocmd("VimLeavePre", {
 
 		-- session_file is keyed to startup_cwd, so no `cd` is needed here; a global
 		-- :cd would clear window/tab-local directories before they're recorded.
-		local ok_save, save_err = pcall(vim.cmd.mksession, { args = { session_file }, bang = true })
+		local ok_save, save_err =
+			pcall(vim.cmd.mksession, { args = { session_file }, bang = true, magic = literal_path })
 		if not ok_save then
 			vim.notify("Failed to save session: " .. tostring(save_err), vim.log.levels.WARN)
 		end

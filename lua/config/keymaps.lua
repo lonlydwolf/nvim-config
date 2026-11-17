@@ -145,6 +145,7 @@ map("t", "<M-n>", "<C-\\><C-n>", { desc = "Exit terminal mode" })
 -- symbols" in the s-group (finder.lua), so this can't live there.
 -- :SessionLoad restores it.
 local manual_session = vim.fn.stdpath("state") .. "/sessions/manual.vim"
+local literal_path = { file = false } -- no %/# expansion in the path
 map("n", "<leader>S", function()
 	local ok_dir, dir_err = pcall(vim.fn.mkdir, vim.fs.dirname(manual_session), "p")
 	if not ok_dir then
@@ -152,7 +153,7 @@ map("n", "<leader>S", function()
 		return
 	end
 
-	local ok, err = pcall(vim.cmd.mksession, { args = { manual_session }, bang = true })
+	local ok, err = pcall(vim.cmd.mksession, { args = { manual_session }, bang = true, magic = literal_path })
 	if ok then
 		vim.notify("Session saved: manual.vim (restore with :SessionLoad)", vim.log.levels.INFO)
 	else
@@ -165,7 +166,7 @@ vim.api.nvim_create_user_command("SessionLoad", function()
 		vim.notify("No manual session saved yet (<leader>S saves one)", vim.log.levels.WARN)
 		return
 	end
-	local ok, err = pcall(vim.cmd.source, { args = { manual_session } })
+	local ok, err = pcall(vim.cmd.source, { args = { manual_session }, magic = literal_path })
 	if not ok then
 		vim.notify("Failed to load manual session: " .. tostring(err), vim.log.levels.ERROR)
 	end
