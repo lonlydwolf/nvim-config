@@ -59,18 +59,40 @@ vim.lsp.enable(servers)
 -- SERVER-SPECIFIC CONFIGURATION
 -- ============================================================
 
--- 1. Lua: Expose Neovim runtime library for auto-completion & docs on vim.*
+-- 1. Lua: LuaJIT and the Neovim runtime library (completion and docs on vim.*),
+-- but only where the Lua being edited is Neovim Lua: this config, installed
+-- plugins and the runtime itself. Any other Lua project keeps lua_ls defaults
+-- and its own .luarc.json, instead of being told `vim` exists.
+local function is_nvim_lua(root)
+	root = vim.uv.fs_realpath(root) or root
+	for _, dir in ipairs({ vim.fn.stdpath("config"), vim.fn.stdpath("data"), vim.env.VIMRUNTIME }) do
+		dir = vim.uv.fs_realpath(dir) or dir
+		if root == dir or vim.startswith(root, dir .. "/") then
+			return true
+		end
+	end
+	return false
+end
+
 vim.lsp.config("lua_ls", {
-	settings = {
-		Lua = {
-			diagnostics = {
-				globals = { "vim" },
+	on_init = function(client)
+		local folder = client.workspace_folders and client.workspace_folders[1]
+		if not (folder and is_nvim_lua(folder.name)) then
+			return
+		end
+		client.config.settings.Lua = vim.tbl_deep_extend("force", client.config.settings.Lua, {
+			runtime = {
+				version = "LuaJIT",
+				path = { "lua/?.lua", "lua/?/init.lua" },
 			},
 			workspace = {
 				checkThirdParty = false,
 				library = { vim.env.VIMRUNTIME },
 			},
-		},
+		})
+	end,
+	settings = {
+		Lua = {},
 	},
 })
 
