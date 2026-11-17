@@ -34,6 +34,44 @@ opt.smartindent = true -- Smart autoindent
 opt.autoindent = true -- Copy indent from current line
 opt.wrap = false -- Do not wrap lines by default
 opt.clipboard:append("unnamedplus") -- Use system clipboard
+
+-- On a machine with no clipboard tool (headless Linux over SSH, outside tmux)
+-- the + register has no provider: Neovim's automatic OSC 52 fallback only
+-- applies while 'clipboard' is unset. Wire it up explicitly for that case.
+-- Copy goes to the local terminal through OSC 52. Paste returns what was last
+-- copied from this Neovim instead of querying the terminal: with unnamedplus
+-- every `p` would otherwise wait for an answer many terminals never send. Use
+-- the terminal's own paste for text copied elsewhere.
+local function has_clipboard_tool()
+	local function exe(name)
+		return vim.fn.executable(name) == 1
+	end
+	return exe("pbcopy")
+		or (vim.env.WAYLAND_DISPLAY and exe("wl-copy"))
+		or (vim.env.DISPLAY and (exe("xsel") or exe("xclip")))
+		or exe("win32yank.exe")
+		or (vim.env.TMUX and exe("tmux")) -- tmux buffer; `set-clipboard on` forwards it
+end
+
+if not vim.g.clipboard and not has_clipboard_tool() then
+	local osc52 = require("vim.ui.clipboard.osc52")
+	local last = { {}, "v" }
+	local function copy(reg)
+		local send = osc52.copy(reg)
+		return function(lines, regtype)
+			last = { lines, regtype }
+			send(lines)
+		end
+	end
+	local function paste()
+		return last
+	end
+	vim.g.clipboard = {
+		name = "OSC 52 (copy only)",
+		copy = { ["+"] = copy("+"), ["*"] = copy("*") },
+		paste = { ["+"] = paste, ["*"] = paste },
+	}
+end
 opt.confirm = true -- Enable prompt to save changes
 
 -- Search
