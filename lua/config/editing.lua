@@ -228,49 +228,82 @@ end
 
 -- Point one buffer's gutter at `base` (nil: back to the current change). Its
 -- "base: trunk" statusline marker follows the result, not the request.
--- A failed switch to trunk also drops the repository's trunk state, so the
--- next <leader>gt retries it and later attaches do not re-apply it.
 ---@param bufnr integer
 ---@param base string?
----@param on_success? fun()
-local function set_buffer_base(bufnr, base, on_success)
+---@param done? fun(ok: boolean)
+local function set_buffer_base(bufnr, base, done)
 	vim.api.nvim_buf_call(bufnr, function()
 		require("gitsigns").change_base(base, false, function(err)
 			vim.schedule(function()
-				if not vim.api.nvim_buf_is_valid(bufnr) then
-					return
-				end
-				if err then
-					local root = repo_root(bufnr)
-					if base and root and trunk_bases[root] == base then
-						trunk_bases[root] = nil
-					end
+				local valid = vim.api.nvim_buf_is_valid(bufnr)
+				if err and valid then
 					local name = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(bufnr), ":~:.")
 					vim.notify(("Could not change the diff base of %s: %s"):format(name, err), vim.log.levels.WARN)
-					return
+				elseif valid then
+					vim.b[bufnr].gitsigns_base_is_trunk = base ~= nil
+					vim.cmd.redrawstatus({ bang = true })
 				end
-				vim.b[bufnr].gitsigns_base_is_trunk = base ~= nil
-				vim.cmd.redrawstatus({ bang = true })
-				if on_success then
-					on_success()
+				if done then
+					done(err == nil)
 				end
 			end)
 		end)
 	end)
 end
 
--- Apply `base` to every loaded buffer of the repository. `on_success` runs
--- once the `current` buffer has switched, so the confirmation follows the
--- result, not the request.
+-- The latest <leader>gt switch per repository. A switch that finishes after a
+-- newer one was started is ignored, so it cannot undo the newer one.
+local trunk_switches = {} ---@type table<string, table>
+
+-- Switch every loaded buffer of the repository to `base` as one operation.
+-- Switching to trunk succeeds for all of them or is rolled back for all of
+-- them (including those that had already switched), so the buffers and the
+-- repository state never disagree. `on_success` runs once all have switched.
 ---@param root string
----@param base string?
----@param current integer
+---@param base string? nil: back to the current change
 ---@param on_success fun()
-local function set_repo_base(root, base, current, on_success)
-	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-		if vim.api.nvim_buf_is_loaded(buf) and repo_root(buf) == root then
-			set_buffer_base(buf, base, buf == current and on_success or nil)
+local function set_repo_base(root, base, on_success)
+	local switch = {}
+	trunk_switches[root] = switch
+	trunk_bases[root] = base -- set first, so buffers attaching meanwhile follow it
+
+	local buffers = vim.tbl_filter(function(buf)
+		return vim.api.nvim_buf_is_loaded(buf) and repo_root(buf) == root
+	end, vim.api.nvim_list_bufs())
+	local pending, switched, failed = #buffers, {}, false
+
+	local function finish()
+		if trunk_switches[root] ~= switch then
+			return -- superseded by a newer switch
 		end
+		trunk_switches[root] = nil
+		if not failed then
+			on_success()
+		elseif base then
+			trunk_bases[root] = nil
+			for _, buf in ipairs(switched) do
+				set_buffer_base(buf, nil)
+			end
+			vim.notify("Could not compare every buffer with trunk; back to the current change", vim.log.levels.WARN)
+		end
+	end
+
+	if pending == 0 then
+		finish()
+		return
+	end
+	for _, buf in ipairs(buffers) do
+		set_buffer_base(buf, base, function(ok)
+			if ok then
+				switched[#switched + 1] = buf
+			else
+				failed = true
+			end
+			pending = pending - 1
+			if pending == 0 then
+				finish()
+			end
+		end)
 	end
 end
 
@@ -344,8 +377,7 @@ require("gitsigns").setup({
 				return
 			end
 			if trunk_bases[repo] then
-				trunk_bases[repo] = nil
-				set_repo_base(repo, nil, bufnr, function()
+				set_repo_base(repo, nil, function()
 					vim.notify("Gutter shows the current change")
 				end)
 				return
@@ -365,8 +397,7 @@ require("gitsigns").setup({
 				vim.notify("Could not find trunk for this repository", vim.log.levels.WARN)
 				return
 			end
-			trunk_bases[repo] = base
-			set_repo_base(repo, base, bufnr, function()
+			set_repo_base(repo, base, function()
 				vim.notify("Gutter shows everything since trunk in " .. vim.fn.fnamemodify(repo, ":~"))
 			end)
 		end, "[G]it: toggle diff base (current change / [T]runk)")
