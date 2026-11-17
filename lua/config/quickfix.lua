@@ -62,10 +62,45 @@ map("n", "<leader>qw", function()
 	vim.notify("Requested workspace diagnostics; <leader>qd lists them as they arrive")
 end, { desc = "[Q]uickfix: request [W]orkspace diagnostics" })
 
--- Every changed hunk in the repository. In a jj repo this is the current change.
+-- Every changed hunk in the current buffer's repository (in a jj repo, the
+-- current change). Gitsigns' "all" also collects every other repository with
+-- an open buffer, where walking the list with ]q and rejecting with
+-- <leader>gr would reset another project's work, so the list is narrowed.
+---@param path string
+---@return string
+local function realpath(path)
+	return vim.uv.fs_realpath(path)
+		or vim.fs.joinpath(vim.uv.fs_realpath(vim.fs.dirname(path)) or vim.fs.dirname(path), vim.fs.basename(path))
+end
+
 map("n", "<leader>qh", function()
-	require("gitsigns").setqflist("all")
-end, { desc = "[Q]uickfix: changed [H]unks" })
+	local status = vim.b.gitsigns_status_dict
+	local root = status and status.root or vim.fs.root(vim.fn.getcwd(), ".git")
+	if not root then
+		vim.notify("Not in a git or jj repository", vim.log.levels.WARN)
+		return
+	end
+	root = realpath(root)
+	local label = vim.fn.fnamemodify(root, ":~")
+
+	require("gitsigns").setqflist("all", { open = false }, function(err)
+		vim.schedule(function()
+			if err then
+				vim.notify("Could not list hunks: " .. tostring(err), vim.log.levels.ERROR)
+				return
+			end
+			local items = vim.tbl_filter(function(item)
+				return item.bufnr > 0 and vim.startswith(realpath(vim.api.nvim_buf_get_name(item.bufnr)), root .. "/")
+			end, vim.fn.getqflist())
+			vim.fn.setqflist({}, "r", { title = "Hunks: " .. label, items = items })
+			if #items == 0 then
+				vim.notify("No changes in " .. label)
+			else
+				vim.cmd("botright copen")
+			end
+		end)
+	end)
+end, { desc = "[Q]uickfix: changed [H]unks (this repository)" })
 
 -- ------------------------------------------------------------
 -- Build and test into the list (:Make, :Test)
