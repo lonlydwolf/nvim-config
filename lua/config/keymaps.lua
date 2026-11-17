@@ -15,9 +15,8 @@ map("n", "<C-Down>", "<cmd>resize -2<CR>", { desc = "Decrease window height" })
 map("n", "<C-Left>", "<cmd>vertical resize -2<CR>", { desc = "Decrease window width" })
 map("n", "<C-Right>", "<cmd>vertical resize +2<CR>", { desc = "Increase window width" })
 
--- Buffer cycling + smart delete (keep window open)
-map("n", "[b", "<cmd>bprevious<CR>", { desc = "Previous buffer" })
-map("n", "]b", "<cmd>bnext<CR>", { desc = "Next buffer" })
+-- Buffer cycling is built in: [b / ]b (count-aware), [B / ]B for first/last.
+-- Smart delete (keep window open)
 map("n", "<leader>bd", function()
 	require("mini.bufremove").delete(0, false)
 end, { desc = "[B]uffer [D]elete (keep window)" })

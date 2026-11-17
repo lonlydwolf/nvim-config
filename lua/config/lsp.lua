@@ -208,11 +208,12 @@ vim.api.nvim_create_autocmd("LspAttach", {
 			vim.tbl_extend("force", opts, { desc = "[G]o to [I]mplementation" })
 		)
 
+		-- grt is the built-in key for type definition (same family as grr/gri).
 		vim.keymap.set(
 			"n",
-			"gy",
+			"grt",
 			fzf.lsp_typedefs,
-			vim.tbl_extend("force", opts, { desc = "[G]o to T[y]pe Definition" })
+			vim.tbl_extend("force", opts, { desc = "[G]o to [T]ype Definition" })
 		)
 
 		vim.keymap.set(
@@ -222,23 +223,8 @@ vim.api.nvim_create_autocmd("LspAttach", {
 			vim.tbl_extend("force", opts, { desc = "Document [O]utline (Symbols)" })
 		)
 
-		-- --------------------------------------------------------
-		-- Diagnostics (fzf-lua)
-		-- --------------------------------------------------------
-
-		vim.keymap.set(
-			"n",
-			"<leader>ld",
-			fzf.diagnostics_document,
-			vim.tbl_extend("force", opts, { desc = "[L]SP [D]iagnostics (Buffer)" })
-		)
-
-		vim.keymap.set(
-			"n",
-			"<leader>lD",
-			fzf.diagnostics_workspace,
-			vim.tbl_extend("force", opts, { desc = "[L]SP [D]iagnostics (Workspace)" })
-		)
+		-- Diagnostics pickers live on <leader>sd / <leader>sD (finder.lua): they
+		-- also list nvim-lint results, so they must not depend on an LSP attach.
 
 		-- --------------------------------------------------------
 		-- LSP Restart
