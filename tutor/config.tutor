@@ -380,7 +380,9 @@ Tests run in the background and failures become quickfix entries.
  2. It fails: the list opens without taking focus. `]q`{normal} jumps to the
     failing assertion in `inventory_test.go`.
  3. Fix the bug in `Total` (it adds one too many), save, and press
-    `<Space>qt`{normal} again. A toast says passed and the list stays shut.
+    `<Space>qt`{normal} again. A toast says passed. The list window opens
+    only on failure, but one that is already open stays: it now shows the
+    passing output, and `<Space>qq`{normal} closes it.
  4. Arguments are passed on: `:Test -run TestRemove`{vim}.
  5. From any other buffer (the quickfix window, a README) `:Test`{vim}
     repeats the last run.
