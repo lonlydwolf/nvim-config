@@ -143,22 +143,33 @@ map("t", "<M-n>", "<C-\\><C-n>", { desc = "Exit terminal mode" })
 -- Manual session save (auto save/restore-by-cwd lives in autocmds.lua).
 -- Capital S, standalone -- lowercase <leader>ss is "search workspace
 -- symbols" in the s-group (finder.lua), so this can't live there.
+-- :SessionLoad restores it.
+local manual_session = vim.fn.stdpath("state") .. "/sessions/manual.vim"
 map("n", "<leader>S", function()
-	local session_dir = vim.fn.stdpath("state") .. "/sessions"
-	local ok_dir, dir_err = pcall(vim.fn.mkdir, session_dir, "p")
+	local ok_dir, dir_err = pcall(vim.fn.mkdir, vim.fs.dirname(manual_session), "p")
 	if not ok_dir then
 		vim.notify("Failed to create session directory: " .. tostring(dir_err), vim.log.levels.ERROR)
 		return
 	end
 
-	local manual_file = session_dir .. "/manual.vim"
-	local ok, err = pcall(vim.cmd, "mksession! " .. vim.fn.fnameescape(manual_file))
+	local ok, err = pcall(vim.cmd.mksession, { args = { manual_session }, bang = true })
 	if ok then
-		vim.notify("Session saved: manual.vim", vim.log.levels.INFO)
+		vim.notify("Session saved: manual.vim (restore with :SessionLoad)", vim.log.levels.INFO)
 	else
 		vim.notify("Failed to save manual session: " .. tostring(err), vim.log.levels.ERROR)
 	end
 end, { desc = "Save session manually" })
+
+vim.api.nvim_create_user_command("SessionLoad", function()
+	if vim.fn.filereadable(manual_session) == 0 then
+		vim.notify("No manual session saved yet (<leader>S saves one)", vim.log.levels.WARN)
+		return
+	end
+	local ok, err = pcall(vim.cmd.source, { args = { manual_session } })
+	if not ok then
+		vim.notify("Failed to load manual session: " .. tostring(err), vim.log.levels.ERROR)
+	end
+end, { desc = "Load the session saved with <leader>S" })
 
 -- <leader>c "Check" group
 vim.keymap.set("n", "<leader>ch", "<cmd>checkhealth<CR>", { desc = "[C]heck [H]ealth (All)" })
