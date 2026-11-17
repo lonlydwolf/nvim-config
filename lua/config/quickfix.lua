@@ -181,7 +181,29 @@ local function errorformat_of(name)
 	return compiler_efm[name]
 end
 
-local running ---@type vim.SystemObj?
+local running ---@type { job: vim.SystemObj?, cancelled: boolean }?
+
+-- Stop the whole process group: the shell and everything it started (a test
+-- binary, a compiler). Signalling only the shell left those running.
+local function stop_running()
+	if running and running.job then
+		running.cancelled = true
+		pcall(vim.uv.kill, -running.job.pid, "sigterm")
+	end
+end
+
+-- The command runs detached (see below), so it would outlive Neovim.
+vim.api.nvim_create_autocmd("VimLeavePre", {
+	group = vim.api.nvim_create_augroup("user-quickfix-run", { clear = true }),
+	desc = "Stop a running :Make or :Test",
+	callback = stop_running,
+})
+
+-- Seeds the errorformat directory stack (%D), so relative paths in the output
+-- resolve against the directory the command ran in, not wherever Neovim is by
+-- the time it finishes (another tab, a :cd in between).
+local enter_dir = "nvim-run: entering '%s'"
+local enter_dir_efm = "%-D" .. enter_dir:format("%f")
 
 -- Run `cmd` in the background and load its output into the quickfix list.
 ---@param cmd string shell command
@@ -194,20 +216,29 @@ local function run(cmd, efm, transform)
 	end
 	local cwd = vim.fn.getcwd()
 	vim.notify("Running: " .. cmd)
-	-- One stream, so compiler errors and test output keep their order.
-	running = vim.system({ "sh", "-c", cmd .. " 2>&1" }, { text = true, cwd = cwd }, function(result)
+	local state = { cancelled = false }
+	running = state
+	-- `exec 2>&1` before the command: stderr of every part of a compound
+	-- command (a && b) joins stdout, so errors keep their order with the rest.
+	-- detach makes the shell a process group leader, so :MakeStop reaches all
+	-- of its children.
+	local argv = { "sh", "-c", "exec 2>&1\n" .. cmd }
+	state.job = vim.system(argv, { text = true, cwd = cwd, detach = true }, function(result)
 		vim.schedule(function()
 			running = nil
 			local lines = vim.split(result.stdout or "", "\n", { trimempty = true })
 			if transform then
 				lines = transform(lines, cwd)
 			end
-			vim.fn.setqflist({}, " ", { title = cmd, lines = lines, efm = efm })
+			table.insert(lines, 1, enter_dir:format(cwd))
+			vim.fn.setqflist({}, " ", { title = cmd, lines = lines, efm = enter_dir_efm .. "," .. efm })
 
 			-- Some patterns mark plain output (summaries, notes) as an error
 			-- without a file. Keep those lines as context, but make ]q / [q
 			-- stop only where there is somewhere to jump to.
-			local items = vim.fn.getqflist()
+			-- The directory marker line has done its job (entries now hold full
+			-- paths), so it is dropped rather than shown.
+			local items = vim.list_slice(vim.fn.getqflist(), 2)
 			local locations = 0
 			for _, item in ipairs(items) do
 				if item.bufnr == 0 then
@@ -217,10 +248,12 @@ local function run(cmd, efm, transform)
 				end
 			end
 			vim.fn.setqflist({}, "r", { title = cmd, items = items })
-			if result.code == 0 then
+			if state.cancelled then
+				vim.notify(cmd .. ": cancelled", vim.log.levels.WARN)
+			elseif result.code == 0 then
 				vim.notify(cmd .. ": passed")
 			elseif result.signal ~= 0 then
-				vim.notify(cmd .. ": cancelled", vim.log.levels.WARN)
+				vim.notify(("%s: killed by signal %d"):format(cmd, result.signal), vim.log.levels.WARN)
 			else
 				local where = locations == 1 and "1 location" or (locations .. " locations")
 				local message = ("%s: failed (exit %d), %s in quickfix"):format(cmd, result.code, where)
@@ -271,7 +304,7 @@ end, { nargs = "*", desc = "Run 'makeprg' in the background, errors to quickfix"
 
 vim.api.nvim_create_user_command("MakeStop", function()
 	if running then
-		running:kill("sigterm")
+		stop_running()
 	else
 		vim.notify("Nothing is running")
 	end
