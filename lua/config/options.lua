@@ -22,6 +22,9 @@ opt.fillchars = { eob = " " } -- Hide'~' characters on blank lines past end-of-f
 opt.pumheight = 10 -- popup menu height
 opt.pumblend = 10 -- popup menu transparency
 opt.winblend = 0 -- floating window transparency
+opt.winborder = "rounded" -- Default border for floats (hover, diagnostics); matches completion and terminal
+opt.showmode = false -- Mode is already shown by the statusline and the cursor line number
+opt.shortmess:append("S") -- Search count is already shown by hlslens and the statusline
 
 -- Editing
 opt.expandtab = true -- Use spaces insted of tab
