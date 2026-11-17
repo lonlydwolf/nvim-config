@@ -85,14 +85,22 @@ local function repository_of(path)
 end
 
 map("n", "<leader>qh", function()
-	local status = vim.b.gitsigns_status_dict
-	local root = status and status.root or vim.fs.root(vim.fn.getcwd(), ".git")
+	-- The repository is chosen with the same rule that filters the list: the
+	-- current file's, or the cwd's when the buffer is not a file.
+	local name = vim.api.nvim_buf_get_name(0)
+	local root = repository_of(vim.bo.buftype == "" and name ~= "" and name or vim.fn.getcwd())
 	if not root then
 		vim.notify("Not in a git or jj repository", vim.log.levels.WARN)
 		return
 	end
-	root = realpath(root)
 	local label = vim.fn.fnamemodify(root, ":~")
+	-- Gitsigns reads git only. In a jj repository without colocated git it
+	-- would show this repository's files as untracked additions of an
+	-- enclosing git repository, where <leader>gr deletes their content.
+	if not vim.uv.fs_stat(vim.fs.joinpath(root, ".git")) then
+		vim.notify(label .. " is a jj repository without colocated git; gitsigns cannot list its hunks")
+		return
+	end
 
 	require("gitsigns").setqflist("all", { open = false }, function(err)
 		vim.schedule(function()
