@@ -131,10 +131,14 @@ local function toggle_terminal()
 	vim.cmd.startinsert()
 end
 
--- Normal mode only: a <Space>-prefixed map in terminal mode eats typed text.
--- Leave the shell with <Esc><Esc>, then <leader>tt.
+-- <M-t> shows/hides the terminal from either mode (Ghostty sends Option as Alt).
+-- <leader>tt stays normal-mode only: a <Space>-prefixed map in terminal mode
+-- would eat typed text.
+map({ "n", "t" }, "<M-t>", toggle_terminal, { desc = "Toggle terminal (floating)" })
 map("n", "<leader>tt", toggle_terminal, { desc = "[T]oggle [T]erminal (floating)" })
-map("t", "<Esc><Esc>", "<C-\\><C-n>", { desc = "Exit terminal mode" })
+-- Terminal-normal mode (scroll, yank, gF on file:line output). Not <Esc><Esc>:
+-- with that mapped, every single <Esc> typed into a TUI waits out 'timeoutlen'.
+map("t", "<M-n>", "<C-\\><C-n>", { desc = "Exit terminal mode" })
 
 -- Manual session save (auto save/restore-by-cwd lives in autocmds.lua).
 -- Capital S, standalone -- lowercase <leader>ss is "search workspace
