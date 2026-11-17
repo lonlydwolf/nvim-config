@@ -5,6 +5,15 @@
 -- File explorer: edit the filesystem like a normal buffer
 require("oil").setup({
 	default_file_explorer = true,
+	keymaps = {
+		-- Oil's defaults take <C-h> (split) and <C-l> (refresh), which breaks
+		-- window/tmux navigation in oil buffers only. Free both and move the
+		-- actions: <C-s> stays vertical split, <C-x> is horizontal, gR refreshes.
+		["<C-h>"] = false,
+		["<C-l>"] = false,
+		["<C-x>"] = { "actions.select", opts = { horizontal = true } },
+		["gR"] = "actions.refresh",
+	},
 })
 vim.keymap.set("n", "-", "<CMD>Oil<CR>", { desc = "Open parent directory (Oil)" })
 
