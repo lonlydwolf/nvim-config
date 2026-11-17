@@ -163,6 +163,46 @@ vim.lsp.config("yamlls", {
 	},
 })
 
+-- 7. Python: one owner per finding. Ruff and basedpyright both report unused
+-- imports, unused variables and undefined names, so each showed up twice.
+--   Ruff         unused imports (F401) and variables (F841): it has the fixes.
+--   basedpyright undefined names: it is type-aware and stays on even when a
+--                project's Ruff config does not select the F rules.
+-- Project config still wins: pyrightconfig.json / [tool.basedpyright] override
+-- these severities, and the Ruff ignore is added to the project's own.
+--
+-- basedpyright runs in its default "recommended" mode. For fewer type warnings
+-- set `vim.g.basedpyright_type_checking_mode = "standard"` (here, or in a
+-- project's .nvim.lua), or typeCheckingMode in the project's own config.
+vim.lsp.config("basedpyright", {
+	before_init = function(_, config)
+		-- Read at server start, so a project-local .nvim.lua can set it.
+		local mode = vim.g.basedpyright_type_checking_mode
+		if mode then
+			config.settings.basedpyright.analysis.typeCheckingMode = mode
+		end
+	end,
+	settings = {
+		basedpyright = {
+			disableOrganizeImports = true, -- Ruff's "organize imports" code action owns this
+			analysis = {
+				diagnosticSeverityOverrides = {
+					reportUnusedImport = "none",
+					reportUnusedVariable = "none",
+				},
+			},
+		},
+	},
+})
+
+vim.lsp.config("ruff", {
+	init_options = {
+		settings = {
+			lint = { ignore = { "F821" } },
+		},
+	},
+})
+
 -- ============================================================
 -- DIAGNOSTICS CONFIGURATION
 -- ============================================================
