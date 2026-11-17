@@ -50,7 +50,43 @@ require("catppuccin").setup({
 })
 vim.cmd.colorscheme("catppuccin")
 
-require("mini.statusline").setup()
+-- Default layout plus state that is otherwise invisible.
+local statusline = require("mini.statusline")
+
+-- Shown while format-on-save is toggled off (<leader>tf / <leader>tF).
+local function section_autoformat()
+	if vim.g.disable_autoformat then
+		return "fmt off (global)"
+	end
+	return vim.b.disable_autoformat and "fmt off" or ""
+end
+
+statusline.setup({
+	content = {
+		active = function()
+			local mode, mode_hl = statusline.section_mode({ trunc_width = 120 })
+			local git = statusline.section_git({ trunc_width = 40 })
+			local diff = statusline.section_diff({ trunc_width = 75 })
+			local diagnostics = statusline.section_diagnostics({ trunc_width = 75 })
+			local lsp = statusline.section_lsp({ trunc_width = 75 })
+			local filename = statusline.section_filename({ trunc_width = 140 })
+			local fileinfo = statusline.section_fileinfo({ trunc_width = 120 })
+			local location = statusline.section_location({ trunc_width = 75 })
+			local search = statusline.section_searchcount({ trunc_width = 75 })
+
+			return statusline.combine_groups({
+				{ hl = mode_hl, strings = { mode } },
+				{ hl = "MiniStatuslineDevinfo", strings = { git, diff, diagnostics, lsp } },
+				"%<", -- Mark general truncate point
+				{ hl = "MiniStatuslineFilename", strings = { filename } },
+				"%=", -- End left alignment
+				{ hl = "DiagnosticWarn", strings = { section_autoformat() } },
+				{ hl = "MiniStatuslineFileinfo", strings = { fileinfo } },
+				{ hl = mode_hl, strings = { search, location } },
+			})
+		end,
+	},
+})
 
 -- toast-only notifications, no cmdline/messages takeover
 -- Blocked lsp progress list
