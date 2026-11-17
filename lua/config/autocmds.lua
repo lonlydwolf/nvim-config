@@ -96,7 +96,7 @@ vim.api.nvim_create_autocmd("VimEnter", {
 		end
 
 		if vim.fn.filereadable(session_file) == 1 then
-			local ok, err = pcall(vim.cmd, "source " .. vim.fn.fnameescape(session_file))
+			local ok, err = pcall(vim.cmd.source, { args = { session_file } })
 			if not ok then
 				-- Prevent broken partial state from overwriting session on exit
 				session_enabled = false
@@ -123,7 +123,7 @@ vim.api.nvim_create_autocmd("VimLeavePre", {
 
 		-- session_file is keyed to startup_cwd, so no `cd` is needed here; a global
 		-- :cd would clear window/tab-local directories before they're recorded.
-		local ok_save, save_err = pcall(vim.cmd, "mksession! " .. vim.fn.fnameescape(session_file))
+		local ok_save, save_err = pcall(vim.cmd.mksession, { args = { session_file }, bang = true })
 		if not ok_save then
 			vim.notify("Failed to save session: " .. tostring(save_err), vim.log.levels.WARN)
 		end

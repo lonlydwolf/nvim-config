@@ -72,6 +72,7 @@ local function project_configures(name, bufnr)
 	if type(marker) == "function" then
 		return marker(dir)
 	end
+	---@cast marker string[]
 	return find_up(dir, marker) ~= nil
 end
 
