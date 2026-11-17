@@ -21,12 +21,13 @@ end
 -- A fresh copy of the template with one baseline commit, so the gutter starts
 -- empty and every edit made during the lessons shows up as a change.
 ---@return boolean ok
-local function create()
-	vim.fn.delete(sandbox, "rf")
+local function build()
 	vim.fn.mkdir(sandbox, "p")
 	for name, type in vim.fs.dir(template) do
-		if type == "file" then
-			vim.uv.fs_copyfile(vim.fs.joinpath(template, name), vim.fs.joinpath(sandbox, name))
+		if
+			type == "file" and not vim.uv.fs_copyfile(vim.fs.joinpath(template, name), vim.fs.joinpath(sandbox, name))
+		then
+			return false
 		end
 	end
 
@@ -40,6 +41,19 @@ local function create()
 	return run({ "git", "init", "-q" })
 		and run({ "git", "add", "-A" })
 		and run(vim.list_extend(vim.list_extend({ "git" }, identity), { "commit", "-q", "-m", "tutor: baseline" }))
+end
+
+-- A sandbox exists only when it was built completely: a failed build is
+-- removed, so the next :TutorSandbox builds again instead of opening a
+-- project with files or the baseline commit missing.
+---@return boolean ok
+local function create()
+	vim.fn.delete(sandbox, "rf")
+	if build() then
+		return true
+	end
+	vim.fn.delete(sandbox, "rf")
+	return false
 end
 
 ---@param path string?
