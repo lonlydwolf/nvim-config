@@ -94,6 +94,22 @@ require("nvim-treesitter-textobjects").setup({
 	move = { set_jumps = true },
 })
 
+-- Sticky context: pins the line that opens the enclosing function/class (up
+-- to three levels) at the top of the window while its body is scrolled.
+require("treesitter-context").setup({
+	max_lines = 3,
+	multiline_threshold = 1, -- a wrapped signature takes one line, not all three
+})
+vim.keymap.set("n", "<leader>tc", "<cmd>TSContext toggle<CR>", { desc = "[T]oggle sticky [C]ontext" })
+-- Jump up to the line the context shows.
+vim.keymap.set("n", "[c", function()
+	if vim.wo.diff then
+		vim.cmd.normal({ "[c", bang = true }) -- keep the built-in "previous change" in diff mode
+	else
+		require("treesitter-context").go_to_context(vim.v.count1)
+	end
+end, { desc = "Jump to enclosing context" })
+
 local ts_select = require("nvim-treesitter-textobjects.select")
 local ts_move = require("nvim-treesitter-textobjects.move")
 local ts_swap = require("nvim-treesitter-textobjects.swap")

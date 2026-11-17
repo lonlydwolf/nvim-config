@@ -43,6 +43,10 @@ vim.pack.add({
 	-- directly rather than being routed through mini.ai.
 	{ src = "https://github.com/nvim-treesitter/nvim-treesitter-textobjects", version = "main" },
 
+	-- Sticky header: keeps the enclosing function/class line visible at the top
+	-- of the window while scrolling through long bodies.
+	{ src = "https://github.com/nvim-treesitter/nvim-treesitter-context" },
+
 	-- mini.nvim monorepo: Single clone providing 40+ lightweight modules
 	-- We will use: mini.ai, mini.surround, mini.pairs, mini.indentscope
 	--              mini.statusline, mini.notify, mini.icons, mini.bufremove
