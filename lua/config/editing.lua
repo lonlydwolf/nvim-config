@@ -228,9 +228,12 @@ end
 
 -- Point one buffer's gutter at `base` (nil: back to the current change). Its
 -- "base: trunk" statusline marker follows the result, not the request.
+-- A failed switch to trunk also drops the repository's trunk state, so the
+-- next <leader>gt retries it and later attaches do not re-apply it.
 ---@param bufnr integer
 ---@param base string?
-local function set_buffer_base(bufnr, base)
+---@param on_success? fun()
+local function set_buffer_base(bufnr, base, on_success)
 	vim.api.nvim_buf_call(bufnr, function()
 		require("gitsigns").change_base(base, false, function(err)
 			vim.schedule(function()
@@ -238,22 +241,35 @@ local function set_buffer_base(bufnr, base)
 					return
 				end
 				if err then
+					local root = repo_root(bufnr)
+					if base and root and trunk_bases[root] == base then
+						trunk_bases[root] = nil
+					end
 					local name = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(bufnr), ":~:.")
 					vim.notify(("Could not change the diff base of %s: %s"):format(name, err), vim.log.levels.WARN)
 					return
 				end
 				vim.b[bufnr].gitsigns_base_is_trunk = base ~= nil
 				vim.cmd.redrawstatus({ bang = true })
+				if on_success then
+					on_success()
+				end
 			end)
 		end)
 	end)
 end
 
+-- Apply `base` to every loaded buffer of the repository. `on_success` runs
+-- once the `current` buffer has switched, so the confirmation follows the
+-- result, not the request.
 ---@param root string
-local function set_repo_base(root, base)
+---@param base string?
+---@param current integer
+---@param on_success fun()
+local function set_repo_base(root, base, current, on_success)
 	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
 		if vim.api.nvim_buf_is_loaded(buf) and repo_root(buf) == root then
-			set_buffer_base(buf, base)
+			set_buffer_base(buf, base, buf == current and on_success or nil)
 		end
 	end
 end
@@ -329,8 +345,9 @@ require("gitsigns").setup({
 			end
 			if trunk_bases[repo] then
 				trunk_bases[repo] = nil
-				set_repo_base(repo, nil)
-				vim.notify("Gutter shows the current change")
+				set_repo_base(repo, nil, bufnr, function()
+					vim.notify("Gutter shows the current change")
+				end)
 				return
 			end
 			-- The fork point with trunk: jj's trunk(), or the remote's default
@@ -349,8 +366,9 @@ require("gitsigns").setup({
 				return
 			end
 			trunk_bases[repo] = base
-			set_repo_base(repo, base)
-			vim.notify("Gutter shows everything since trunk in " .. vim.fn.fnamemodify(repo, ":~"))
+			set_repo_base(repo, base, bufnr, function()
+				vim.notify("Gutter shows everything since trunk in " .. vim.fn.fnamemodify(repo, ":~"))
+			end)
 		end, "[G]it: toggle diff base (current change / [T]runk)")
 	end,
 })
