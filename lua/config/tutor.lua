@@ -42,16 +42,65 @@ local function create()
 		and run(vim.list_extend(vim.list_extend({ "git" }, identity), { "commit", "-q", "-m", "tutor: baseline" }))
 end
 
+---@param path string?
+---@param roots string[] the sandbox, as named and as resolved
+---@return boolean
+local function inside(path, roots)
+	if not path or path == "" then
+		return false
+	end
+	for _, root in ipairs(roots) do
+		if path == root or vim.startswith(path, root .. "/") then
+			return true
+		end
+	end
+	return false
+end
+
+-- Recreate the sandbox. Neovim may be standing in it (its tab uses it as the
+-- working directory), and deleting the directory under the process would
+-- leave every relative path broken, so step out first and come back after.
+-- Buffers still showing sandbox files are then reloaded from the new copy,
+-- dropping unsaved lesson edits that could otherwise be written back.
+---@return boolean ok
+local function reset()
+	local roots = { sandbox, vim.uv.fs_realpath(sandbox) }
+	local cwd = vim.uv.cwd()
+	local was_inside = inside(cwd, roots)
+	if was_inside then
+		vim.uv.chdir(vim.fn.stdpath("cache"))
+	end
+
+	local ok = create()
+
+	if cwd and was_inside then
+		vim.uv.chdir(vim.uv.fs_stat(cwd) and cwd or sandbox)
+	end
+	roots[#roots + 1] = vim.uv.fs_realpath(sandbox)
+	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+		local name = vim.api.nvim_buf_get_name(buf)
+		if vim.api.nvim_buf_is_loaded(buf) and vim.bo[buf].buftype == "" and inside(name, roots) then
+			if vim.uv.fs_stat(name) then
+				vim.api.nvim_buf_call(buf, function()
+					vim.cmd("silent edit!")
+				end)
+			elseif not pcall(require("mini.bufremove").wipeout, buf, true) then
+				pcall(vim.api.nvim_buf_delete, buf, { force = true })
+			end
+		end
+	end
+	return ok
+end
+
 -- :TutorSandbox   open the practice project in its own tab (creating it on
 --                 first use). gt / gT switch between it and the tutor.
 -- :TutorSandbox!  throw the project away and start from a clean copy.
 vim.api.nvim_create_user_command("TutorSandbox", function(opts)
 	if opts.bang or not vim.uv.fs_stat(sandbox) then
-		if not create() then
+		if not reset() then
 			vim.notify("Could not set up the tutor sandbox in " .. sandbox, vim.log.levels.ERROR)
 			return
 		end
-		vim.cmd("silent! checktime") -- reload sandbox buffers that were already open
 		vim.notify("Tutor sandbox ready: " .. vim.fn.fnamemodify(sandbox, ":~"))
 	end
 
