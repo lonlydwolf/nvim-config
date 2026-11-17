@@ -65,12 +65,23 @@ end, { desc = "[Q]uickfix: request [W]orkspace diagnostics" })
 -- Every changed hunk in the current buffer's repository (in a jj repo, the
 -- current change). Gitsigns' "all" also collects every other repository with
 -- an open buffer, where walking the list with ]q and rejecting with
--- <leader>gr would reset another project's work, so the list is narrowed.
+-- <leader>gr would reset another project's work, so the list is narrowed to
+-- files that belong to this repository.
 ---@param path string
 ---@return string
 local function realpath(path)
 	return vim.uv.fs_realpath(path)
 		or vim.fs.joinpath(vim.uv.fs_realpath(vim.fs.dirname(path)) or vim.fs.dirname(path), vim.fs.basename(path))
+end
+
+-- The repository a file belongs to: the nearest directory above it holding a
+-- .git or .jj. Checking that, rather than whether the path lies under the
+-- root, keeps out nested repositories and submodules, which have their own.
+---@param path string
+---@return string?
+local function repository_of(path)
+	local found = vim.fs.root(path, { { ".git", ".jj" } })
+	return found and realpath(found)
 end
 
 map("n", "<leader>qh", function()
@@ -90,7 +101,7 @@ map("n", "<leader>qh", function()
 				return
 			end
 			local items = vim.tbl_filter(function(item)
-				return item.bufnr > 0 and vim.startswith(realpath(vim.api.nvim_buf_get_name(item.bufnr)), root .. "/")
+				return item.bufnr > 0 and repository_of(vim.api.nvim_buf_get_name(item.bufnr)) == root
 			end, vim.fn.getqflist())
 			vim.fn.setqflist({}, "r", { title = "Hunks: " .. label, items = items })
 			if #items == 0 then
