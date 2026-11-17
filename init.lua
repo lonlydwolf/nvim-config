@@ -18,6 +18,7 @@ local modules = {
 	"config.ui", -- catppuccin, mini.statusline, mini.notify, which-key
 	"config.keymaps", -- general keymaps, terminal toggle, session save
 	"config.yank", -- <leader>y: copy diagnostics, file references, code with context
+	"config.quickfix", -- <leader>q: quickfix toggle, diagnostics/hunks to list
 	"config.autocmds", -- yank flash, session save/restore
 }
 

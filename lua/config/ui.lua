@@ -150,6 +150,7 @@ which_key.add({
 	{ "<leader>s", group = "[S]earch" },
 	{ "<leader>t", group = "[T]oggle" },
 	{ "<leader>c", group = "[C]heck" },
+	{ "<leader>q", group = "[Q]uickfix" },
 	{ "<leader>y", group = "[Y]ank context", mode = { "n", "x" } },
 })
 
