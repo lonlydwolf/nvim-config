@@ -207,9 +207,14 @@ vim.lsp.config("ruff", {
 -- DIAGNOSTICS CONFIGURATION
 -- ============================================================
 
+-- Both only on the cursor line. Errors expand below it with the full message;
+-- warnings and hints stay at the end of the line, so moving over them no
+-- longer shifts the code up and down. <C-w>d opens the full float.
+local severity = vim.diagnostic.severity
 vim.diagnostic.config({
-	virtual_text = false,
-	virtual_lines = { current_line = true },
+	virtual_lines = { current_line = true, severity = severity.ERROR },
+	virtual_text = { current_line = true, severity = { max = severity.WARN }, source = "if_many" },
+	float = { source = true },
 	signs = true,
 	underline = true,
 	severity_sort = true,
