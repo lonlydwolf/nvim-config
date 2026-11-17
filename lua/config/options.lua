@@ -41,6 +41,9 @@ opt.ignorecase = true -- Case insensitive search
 opt.smartcase = true -- Case sensitive if uppercase in string
 opt.incsearch = true -- Show matches as typing
 opt.hlsearch = true -- Highlight search matches
+-- :grep fills the quickfix list. The default adds -uu, which also searches
+-- ignored and hidden files (.git, node_modules, build output).
+opt.grepprg = "rg --vimgrep --smart-case"
 
 -- Disk-backed, persistent undo history and crash recovery
 opt.undofile = true
@@ -56,7 +59,10 @@ opt.foldlevel = 99 -- Open all folds by default
 opt.foldlevelstart = 99 -- Ensure folds don't automatically close on file open
 
 -- Snappier/Better Diffs and Command Line
-opt.diffopt:append("linematch:60") -- Intelligently align lines inside diff hunks
+-- Intelligently align lines inside diff hunks. Replace the default
+-- linematch:40 rather than appending a second linematch entry.
+opt.diffopt:remove("linematch:40")
+opt.diffopt:append("linematch:60")
 opt.wildmode = "longest:full,full" -- Bash/Zsh-like command line tab completion
 
 -- Per Project Overrides
