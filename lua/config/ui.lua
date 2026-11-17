@@ -53,6 +53,23 @@ vim.cmd.colorscheme("catppuccin")
 -- Default layout plus state that is otherwise invisible.
 local statusline = require("mini.statusline")
 
+-- In a jj repo git only knows a detached HEAD, so show the jj change and the
+-- nearest bookmark instead of a commit hash. Plain git repos keep the default.
+local jj = require("config.jj")
+local function section_vcs(args)
+	local summary = jj.summary(vim.api.nvim_get_current_buf())
+	if not summary then
+		return statusline.section_git(args)
+	end
+	return statusline.is_truncated(args.trunc_width) and "" or (" " .. summary)
+end
+
+-- Shown while the gutter compares against trunk instead of the current
+-- change's parent (<leader>gt, editing.lua).
+local function section_diff_base()
+	return vim.g.gitsigns_base_is_trunk and "base: trunk" or ""
+end
+
 -- Shown while format-on-save is toggled off (<leader>tf / <leader>tF).
 local function section_autoformat()
 	if vim.g.disable_autoformat then
@@ -65,7 +82,7 @@ statusline.setup({
 	content = {
 		active = function()
 			local mode, mode_hl = statusline.section_mode({ trunc_width = 120 })
-			local git = statusline.section_git({ trunc_width = 40 })
+			local git = section_vcs({ trunc_width = 40 })
 			local diff = statusline.section_diff({ trunc_width = 75 })
 			local diagnostics = statusline.section_diagnostics({ trunc_width = 75 })
 			local lsp = statusline.section_lsp({ trunc_width = 75 })
@@ -80,7 +97,7 @@ statusline.setup({
 				"%<", -- Mark general truncate point
 				{ hl = "MiniStatuslineFilename", strings = { filename } },
 				"%=", -- End left alignment
-				{ hl = "DiagnosticWarn", strings = { section_autoformat() } },
+				{ hl = "DiagnosticWarn", strings = { section_diff_base(), section_autoformat() } },
 				{ hl = "MiniStatuslineFileinfo", strings = { fileinfo } },
 				{ hl = mode_hl, strings = { search, location } },
 			})

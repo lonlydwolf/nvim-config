@@ -190,9 +190,17 @@ indentscope.setup({
 -- Buffer removal preserving window layouts
 require("mini.bufremove").setup()
 
--- Git gutter signs / hunk actions. Reads .git directly, so this works fine
--- against a jj repo with a colocated git backend.
+-- Git gutter signs / hunk actions. Reads .git directly, so this works against
+-- a jj repo with a colocated git backend: the gutter is the current jj change.
+-- After `jj new` it is empty, so everything that then appears is what changed
+-- since (an agent's edits, for instance): walk it with ]h / [h, preview with
+-- <leader>gp, reject a hunk with <leader>gr, list all with <leader>qh.
+local jj = require("config.jj")
+
 require("gitsigns").setup({
+	-- A file jj has not snapshotted yet is untracked to git. Attach anyway, so a
+	-- newly created file shows up in the gutter and in <leader>qh.
+	attach_to_untracked = true,
 	on_attach = function(bufnr)
 		local gs = require("gitsigns")
 		local function gmap(mode, lhs, rhs, desc)
@@ -207,17 +215,54 @@ require("gitsigns").setup({
 		gmap("n", "[h", function()
 			gs.nav_hunk("prev")
 		end, "Previous hunk")
-		gmap("n", "<leader>gs", gs.stage_hunk, "[G]it [S]tage hunk")
+		gmap({ "o", "x" }, "ih", gs.select_hunk, "Inside hunk")
+
 		gmap("n", "<leader>gr", gs.reset_hunk, "[G]it [R]eset hunk")
 		-- Visual actions operate on selected lines, not the entire cursor hunk.
-		gmap("x", "<leader>gs", function()
-			gs.stage_hunk({ vim.fn.line("."), vim.fn.line("v") })
-		end, "[G]it [S]tage selected lines")
 		gmap("x", "<leader>gr", function()
 			gs.reset_hunk({ vim.fn.line("."), vim.fn.line("v") })
 		end, "[G]it [R]eset selected lines")
 		gmap("n", "<leader>gp", gs.preview_hunk, "[G]it [P]review hunk")
 		gmap("n", "<leader>gb", gs.toggle_current_line_blame, "[G] Toggle line [B]lame")
 		gmap("n", "<leader>gd", gs.diffthis, "[G]it [D]iff this file")
+
+		-- Staging means nothing under jj (there is no index to commit from), so
+		-- the stage keys exist only in plain git repos.
+		if not jj.root(bufnr) then
+			gmap("n", "<leader>gs", gs.stage_hunk, "[G]it [S]tage hunk")
+			gmap("x", "<leader>gs", function()
+				gs.stage_hunk({ vim.fn.line("."), vim.fn.line("v") })
+			end, "[G]it [S]tage selected lines")
+		end
+
+		-- Widen the gutter from "the current change" to "everything since
+		-- trunk", for reviewing a whole stack or branch. Applies to all buffers;
+		-- the statusline shows "base: trunk" while it is on.
+		gmap("n", "<leader>gt", function()
+			if vim.g.gitsigns_base_is_trunk then
+				gs.reset_base(true)
+				vim.g.gitsigns_base_is_trunk = false
+				vim.notify("Gutter shows the current change")
+				return
+			end
+			-- The fork point with trunk: jj's trunk(), or the remote's default
+			-- branch in a plain git repo.
+			local base
+			if jj.root(bufnr) then
+				base = jj.trunk_commit(bufnr)
+			else
+				local dir = vim.fs.dirname(vim.api.nvim_buf_get_name(bufnr))
+				local result = vim.system({ "git", "merge-base", "HEAD", "origin/HEAD" }, { cwd = dir, text = true })
+					:wait(2000)
+				base = result.code == 0 and vim.trim(result.stdout) or nil
+			end
+			if not base then
+				vim.notify("Could not find trunk for this repository", vim.log.levels.WARN)
+				return
+			end
+			gs.change_base(base, true)
+			vim.g.gitsigns_base_is_trunk = true
+			vim.notify("Gutter shows everything since trunk")
+		end, "[G]it: toggle diff base (current change / [T]runk)")
 	end,
 })
