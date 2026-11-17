@@ -176,3 +176,15 @@ require("modicator").setup()
 
 -- Initialize nvim-hlslens
 require("hlslens").setup()
+
+-- EXPERIMENTAL (Neovim 0.12): the redesigned message and command-line UI.
+-- Long output no longer stops at a "Press ENTER" prompt: it collapses to a
+-- [+N] marker, and g< opens the full text in a pager you can search and yank.
+-- Set this to false to return to the classic UI.
+local use_ui2 = true
+if use_ui2 then
+	local ok, ui2 = pcall(require, "vim._core.ui2")
+	if ok then
+		ui2.enable({})
+	end
+end
