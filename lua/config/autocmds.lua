@@ -60,21 +60,35 @@ vim.api.nvim_create_autocmd({ "BufEnter", "TermLeave", "CursorHold" }, {
 	end,
 })
 
--- Say so when a buffer was reloaded, so external edits are never silent.
--- Batched: an agent often touches several open files at once.
-local reloaded = {}
+-- Say what happened to each buffer whose file changed outside Neovim, so
+-- external edits are never silent. Batched: an agent often touches several
+-- open files at once. Only an unmodified buffer is reloaded; one with unsaved
+-- edits keeps them (Neovim's W12 prompt), and a deleted file stays as it was.
+local external = { reloaded = {}, kept = {}, deleted = {} }
+local external_messages = {
+	{ "reloaded", "Reloaded from disk: %s", vim.log.levels.INFO },
+	{ "kept", "Changed on disk, your unsaved edits kept (:e! loads the disk version): %s", vim.log.levels.WARN },
+	{ "deleted", "Deleted on disk: %s", vim.log.levels.WARN },
+}
 vim.api.nvim_create_autocmd("FileChangedShellPost", {
 	group = augroup,
-	desc = "Report buffers reloaded after an external change",
+	desc = "Report buffers changed outside Neovim",
 	callback = function(ev)
-		if #reloaded == 0 then
+		local pending = #external.reloaded + #external.kept + #external.deleted > 0
+		local path = vim.api.nvim_buf_get_name(ev.buf)
+		local kind = not vim.uv.fs_stat(path) and "deleted" or vim.bo[ev.buf].modified and "kept" or "reloaded"
+		table.insert(external[kind], vim.fn.fnamemodify(path, ":~:."))
+		if not pending then
 			vim.defer_fn(function()
-				local names = table.concat(reloaded, ", ")
-				vim.notify(("Reloaded from disk: %s"):format(names))
-				reloaded = {}
+				for _, message in ipairs(external_messages) do
+					local names = external[message[1]]
+					if #names > 0 then
+						vim.notify(message[2]:format(table.concat(names, ", ")), message[3])
+					end
+				end
+				external = { reloaded = {}, kept = {}, deleted = {} }
 			end, 150)
 		end
-		reloaded[#reloaded + 1] = vim.fn.fnamemodify(ev.file, ":~:.")
 	end,
 })
 
